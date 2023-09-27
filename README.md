@@ -8,7 +8,7 @@ docker-compose up --build
 ```
 Test using an endpoint like:
 ```
-curl -I localhost:8080/integrations/tenant/0/roles/
+curl -I localhost:8080/access/
 ```
 ## Docker
 ```
