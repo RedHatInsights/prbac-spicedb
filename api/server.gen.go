@@ -10,6 +10,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"path"
@@ -23,72 +24,432 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
-// Defines values for ListOrgAdminsParamsType.
 const (
-	AccountId ListOrgAdminsParamsType = "account_id"
-	OrgId     ListOrgAdminsParamsType = "org_id"
+	Basic_authScopes = "basic_auth.Scopes"
+)
+
+// Defines values for CrossAccountRequestPatchStatus.
+const (
+	CrossAccountRequestPatchStatusApproved  CrossAccountRequestPatchStatus = "approved"
+	CrossAccountRequestPatchStatusCancelled CrossAccountRequestPatchStatus = "cancelled"
+	CrossAccountRequestPatchStatusDenied    CrossAccountRequestPatchStatus = "denied"
+	CrossAccountRequestPatchStatusExpired   CrossAccountRequestPatchStatus = "expired"
+	CrossAccountRequestPatchStatusPending   CrossAccountRequestPatchStatus = "pending"
+)
+
+// Defines values for ResourceDefinitionFilterOperation.
+const (
+	Equal ResourceDefinitionFilterOperation = "equal"
+	In    ResourceDefinitionFilterOperation = "in"
+)
+
+// Defines values for NameMatchCriteria.
+const (
+	NameMatchCriteriaExact   NameMatchCriteria = "exact"
+	NameMatchCriteriaPartial NameMatchCriteria = "partial"
+)
+
+// Defines values for ScopeFilter.
+const (
+	ScopeFilterAccount   ScopeFilter = "account"
+	ScopeFilterPrincipal ScopeFilter = "principal"
+)
+
+// Defines values for GetPrincipalAccessParamsOrderBy.
+const (
+	GetPrincipalAccessParamsOrderByApplication  GetPrincipalAccessParamsOrderBy = "application"
+	GetPrincipalAccessParamsOrderByResourceType GetPrincipalAccessParamsOrderBy = "resource_type"
+	GetPrincipalAccessParamsOrderByVerb         GetPrincipalAccessParamsOrderBy = "verb"
+)
+
+// Defines values for GetPrincipalAccessParamsStatus.
+const (
+	GetPrincipalAccessParamsStatusAll      GetPrincipalAccessParamsStatus = "all"
+	GetPrincipalAccessParamsStatusDisabled GetPrincipalAccessParamsStatus = "disabled"
+	GetPrincipalAccessParamsStatusEnabled  GetPrincipalAccessParamsStatus = "enabled"
+)
+
+// Defines values for ListCrossAccountRequestsParamsQueryBy.
+const (
+	ListCrossAccountRequestsParamsQueryByTargetOrg ListCrossAccountRequestsParamsQueryBy = "target_org"
+	ListCrossAccountRequestsParamsQueryByUserId    ListCrossAccountRequestsParamsQueryBy = "user_id"
+)
+
+// Defines values for ListCrossAccountRequestsParamsApprovedOnly.
+const (
+	ListCrossAccountRequestsParamsApprovedOnlyTrue ListCrossAccountRequestsParamsApprovedOnly = "true"
+)
+
+// Defines values for ListCrossAccountRequestsParamsStatus.
+const (
+	ListCrossAccountRequestsParamsStatusApproved  ListCrossAccountRequestsParamsStatus = "approved"
+	ListCrossAccountRequestsParamsStatusCancelled ListCrossAccountRequestsParamsStatus = "cancelled"
+	ListCrossAccountRequestsParamsStatusDenied    ListCrossAccountRequestsParamsStatus = "denied"
+	ListCrossAccountRequestsParamsStatusExpired   ListCrossAccountRequestsParamsStatus = "expired"
+	ListCrossAccountRequestsParamsStatusPending   ListCrossAccountRequestsParamsStatus = "pending"
+)
+
+// Defines values for ListCrossAccountRequestsParamsOrderBy.
+const (
+	ListCrossAccountRequestsParamsOrderByCreated   ListCrossAccountRequestsParamsOrderBy = "created"
+	ListCrossAccountRequestsParamsOrderByEndDate   ListCrossAccountRequestsParamsOrderBy = "end_date"
+	ListCrossAccountRequestsParamsOrderByModified  ListCrossAccountRequestsParamsOrderBy = "modified"
+	ListCrossAccountRequestsParamsOrderByRequestId ListCrossAccountRequestsParamsOrderBy = "request_id"
+	ListCrossAccountRequestsParamsOrderByStartDate ListCrossAccountRequestsParamsOrderBy = "start_date"
+	ListCrossAccountRequestsParamsOrderByStatus    ListCrossAccountRequestsParamsOrderBy = "status"
+)
+
+// Defines values for GetCrossAccountRequestParamsQueryBy.
+const (
+	GetCrossAccountRequestParamsQueryByTargetOrg GetCrossAccountRequestParamsQueryBy = "target_org"
+	GetCrossAccountRequestParamsQueryByUserId    GetCrossAccountRequestParamsQueryBy = "user_id"
+)
+
+// Defines values for GetCrossAccountRequestParamsApprovedOnly.
+const (
+	GetCrossAccountRequestParamsApprovedOnlyTrue GetCrossAccountRequestParamsApprovedOnly = "true"
+)
+
+// Defines values for ListGroupsParamsNameMatch.
+const (
+	ListGroupsParamsNameMatchExact   ListGroupsParamsNameMatch = "exact"
+	ListGroupsParamsNameMatchPartial ListGroupsParamsNameMatch = "partial"
+)
+
+// Defines values for ListGroupsParamsScope.
+const (
+	ListGroupsParamsScopeAccount   ListGroupsParamsScope = "account"
+	ListGroupsParamsScopePrincipal ListGroupsParamsScope = "principal"
+)
+
+// Defines values for ListGroupsParamsRoleDiscriminator.
+const (
+	ListGroupsParamsRoleDiscriminatorAll ListGroupsParamsRoleDiscriminator = "all"
+	ListGroupsParamsRoleDiscriminatorAny ListGroupsParamsRoleDiscriminator = "any"
 )
 
 // Defines values for ListGroupsParamsOrderBy.
 const (
-	ListGroupsParamsOrderByModified ListGroupsParamsOrderBy = "modified"
-	ListGroupsParamsOrderByName     ListGroupsParamsOrderBy = "name"
+	ListGroupsParamsOrderByModified       ListGroupsParamsOrderBy = "modified"
+	ListGroupsParamsOrderByName           ListGroupsParamsOrderBy = "name"
+	ListGroupsParamsOrderByPolicyCount    ListGroupsParamsOrderBy = "policyCount"
+	ListGroupsParamsOrderByPrincipalCount ListGroupsParamsOrderBy = "principalCount"
 )
 
-// Defines values for ListPrincipalsForGroupParamsOrderBy.
+// Defines values for GetPrincipalsFromGroupParamsAdminOnly.
 const (
-	Username ListPrincipalsForGroupParamsOrderBy = "username"
+	GetPrincipalsFromGroupParamsAdminOnlyFalse GetPrincipalsFromGroupParamsAdminOnly = "false"
+	GetPrincipalsFromGroupParamsAdminOnlyTrue  GetPrincipalsFromGroupParamsAdminOnly = "true"
 )
 
-// Defines values for ListPrincipalsForGroupParamsUsernameOnly.
+// Defines values for GetPrincipalsFromGroupParamsOrderBy.
 const (
-	False ListPrincipalsForGroupParamsUsernameOnly = false
-	True  ListPrincipalsForGroupParamsUsernameOnly = true
+	GetPrincipalsFromGroupParamsOrderByUsername GetPrincipalsFromGroupParamsOrderBy = "username"
+)
+
+// Defines values for GetPrincipalsFromGroupParamsUsernameOnly.
+const (
+	GetPrincipalsFromGroupParamsUsernameOnlyFalse GetPrincipalsFromGroupParamsUsernameOnly = false
+	GetPrincipalsFromGroupParamsUsernameOnlyTrue  GetPrincipalsFromGroupParamsUsernameOnly = true
 )
 
 // Defines values for ListRolesForGroupParamsOrderBy.
 const (
-	ListRolesForGroupParamsOrderByModified ListRolesForGroupParamsOrderBy = "modified"
-	ListRolesForGroupParamsOrderByName     ListRolesForGroupParamsOrderBy = "name"
+	ListRolesForGroupParamsOrderByDisplayName ListRolesForGroupParamsOrderBy = "display_name"
+	ListRolesForGroupParamsOrderByModified    ListRolesForGroupParamsOrderBy = "modified"
+	ListRolesForGroupParamsOrderByName        ListRolesForGroupParamsOrderBy = "name"
+	ListRolesForGroupParamsOrderByPolicyCount ListRolesForGroupParamsOrderBy = "policyCount"
 )
 
-// Defines values for ListGroupsForPrincipalParamsOrderBy.
+// Defines values for ListPermissionsParamsOrderBy.
 const (
-	ListGroupsForPrincipalParamsOrderByModified ListGroupsForPrincipalParamsOrderBy = "modified"
-	ListGroupsForPrincipalParamsOrderByName     ListGroupsForPrincipalParamsOrderBy = "name"
+	ListPermissionsParamsOrderByApplication  ListPermissionsParamsOrderBy = "application"
+	ListPermissionsParamsOrderByPermission   ListPermissionsParamsOrderBy = "permission"
+	ListPermissionsParamsOrderByResourceType ListPermissionsParamsOrderBy = "resource_type"
+	ListPermissionsParamsOrderByVerb         ListPermissionsParamsOrderBy = "verb"
 )
 
-// Defines values for ListRolesForGroupsForPrincipalParamsOrderBy.
+// Defines values for ListPermissionsParamsExcludeGlobals.
 const (
-	ListRolesForGroupsForPrincipalParamsOrderByModified ListRolesForGroupsForPrincipalParamsOrderBy = "modified"
-	ListRolesForGroupsForPrincipalParamsOrderByName     ListRolesForGroupsForPrincipalParamsOrderBy = "name"
+	ListPermissionsParamsExcludeGlobalsFalse ListPermissionsParamsExcludeGlobals = "false"
+	ListPermissionsParamsExcludeGlobalsTrue  ListPermissionsParamsExcludeGlobals = "true"
 )
 
-// Defines values for ListRoleParamsNameMatch.
+// Defines values for ListPermissionsParamsAllowedOnly.
 const (
-	Exact   ListRoleParamsNameMatch = "exact"
-	Partial ListRoleParamsNameMatch = "partial"
+	ListPermissionsParamsAllowedOnlyFalse ListPermissionsParamsAllowedOnly = "false"
+	ListPermissionsParamsAllowedOnlyTrue  ListPermissionsParamsAllowedOnly = "true"
 )
 
-// Defines values for ListRoleParamsScope.
+// Defines values for ListPermissionOptionsParamsField.
 const (
-	ListRoleParamsScopeAccount   ListRoleParamsScope = "account"
-	ListRoleParamsScopePrincipal ListRoleParamsScope = "principal"
+	Application  ListPermissionOptionsParamsField = "application"
+	ResourceType ListPermissionOptionsParamsField = "resource_type"
+	Verb         ListPermissionOptionsParamsField = "verb"
 )
 
-// Defines values for ListRoleParamsOrderBy.
+// Defines values for ListPermissionOptionsParamsExcludeGlobals.
 const (
-	DisplayName ListRoleParamsOrderBy = "display_name"
-	Modified    ListRoleParamsOrderBy = "modified"
-	Name        ListRoleParamsOrderBy = "name"
-	PolicyCount ListRoleParamsOrderBy = "policyCount"
+	ListPermissionOptionsParamsExcludeGlobalsFalse ListPermissionOptionsParamsExcludeGlobals = "false"
+	ListPermissionOptionsParamsExcludeGlobalsTrue  ListPermissionOptionsParamsExcludeGlobals = "true"
 )
 
-// Defines values for ListRoleParamsAddFields.
+// Defines values for ListPermissionOptionsParamsAllowedOnly.
 const (
-	GroupsIn      ListRoleParamsAddFields = "groups_in"
-	GroupsInCount ListRoleParamsAddFields = "groups_in_count"
+	ListPermissionOptionsParamsAllowedOnlyFalse ListPermissionOptionsParamsAllowedOnly = "false"
+	ListPermissionOptionsParamsAllowedOnlyTrue  ListPermissionOptionsParamsAllowedOnly = "true"
 )
+
+// Defines values for ListPoliciesParamsScope.
+const (
+	ListPoliciesParamsScopeAccount   ListPoliciesParamsScope = "account"
+	ListPoliciesParamsScopePrincipal ListPoliciesParamsScope = "principal"
+)
+
+// Defines values for ListPoliciesParamsOrderBy.
+const (
+	ListPoliciesParamsOrderByModified ListPoliciesParamsOrderBy = "modified"
+	ListPoliciesParamsOrderByName     ListPoliciesParamsOrderBy = "name"
+)
+
+// Defines values for ListPrincipalsParamsMatchCriteria.
+const (
+	ListPrincipalsParamsMatchCriteriaExact   ListPrincipalsParamsMatchCriteria = "exact"
+	ListPrincipalsParamsMatchCriteriaPartial ListPrincipalsParamsMatchCriteria = "partial"
+)
+
+// Defines values for ListPrincipalsParamsSortOrder.
+const (
+	Asc  ListPrincipalsParamsSortOrder = "asc"
+	Desc ListPrincipalsParamsSortOrder = "desc"
+)
+
+// Defines values for ListPrincipalsParamsStatus.
+const (
+	All      ListPrincipalsParamsStatus = "all"
+	Disabled ListPrincipalsParamsStatus = "disabled"
+	Enabled  ListPrincipalsParamsStatus = "enabled"
+)
+
+// Defines values for ListPrincipalsParamsAdminOnly.
+const (
+	ListPrincipalsParamsAdminOnlyFalse ListPrincipalsParamsAdminOnly = "false"
+	ListPrincipalsParamsAdminOnlyTrue  ListPrincipalsParamsAdminOnly = "true"
+)
+
+// Defines values for ListPrincipalsParamsOrderBy.
+const (
+	ListPrincipalsParamsOrderByUsername ListPrincipalsParamsOrderBy = "username"
+)
+
+// Defines values for ListPrincipalsParamsUsernameOnly.
+const (
+	ListPrincipalsParamsUsernameOnlyFalse ListPrincipalsParamsUsernameOnly = false
+	ListPrincipalsParamsUsernameOnlyTrue  ListPrincipalsParamsUsernameOnly = true
+)
+
+// Defines values for ListRolesParamsNameMatch.
+const (
+	ListRolesParamsNameMatchExact   ListRolesParamsNameMatch = "exact"
+	ListRolesParamsNameMatchPartial ListRolesParamsNameMatch = "partial"
+)
+
+// Defines values for ListRolesParamsScope.
+const (
+	ListRolesParamsScopeAccount   ListRolesParamsScope = "account"
+	ListRolesParamsScopePrincipal ListRolesParamsScope = "principal"
+)
+
+// Defines values for ListRolesParamsOrderBy.
+const (
+	DisplayName ListRolesParamsOrderBy = "display_name"
+	Modified    ListRolesParamsOrderBy = "modified"
+	Name        ListRolesParamsOrderBy = "name"
+	PolicyCount ListRolesParamsOrderBy = "policyCount"
+)
+
+// Defines values for ListRolesParamsAddFields.
+const (
+	ListRolesParamsAddFieldsAccess        ListRolesParamsAddFields = "access"
+	ListRolesParamsAddFieldsGroupsIn      ListRolesParamsAddFields = "groups_in"
+	ListRolesParamsAddFieldsGroupsInCount ListRolesParamsAddFields = "groups_in_count"
+)
+
+// Defines values for GetRoleParamsScope.
+const (
+	GetRoleParamsScopeAccount   GetRoleParamsScope = "account"
+	GetRoleParamsScopePrincipal GetRoleParamsScope = "principal"
+)
+
+// Access defines model for Access.
+type Access struct {
+	Permission          string               `json:"permission"`
+	ResourceDefinitions []ResourceDefinition `json:"resourceDefinitions"`
+}
+
+// AccessPagination defines model for AccessPagination.
+type AccessPagination struct {
+	Data  []Access         `json:"data"`
+	Links *PaginationLinks `json:"links,omitempty"`
+	Meta  *PaginationMeta  `json:"meta,omitempty"`
+}
+
+// AdditionalGroup defines model for AdditionalGroup.
+type AdditionalGroup struct {
+	Description *string `json:"description,omitempty"`
+	Name        *string `json:"name,omitempty"`
+	Uuid        *string `json:"uuid,omitempty"`
+}
+
+// CrossAccountRequest defines model for CrossAccountRequest.
+type CrossAccountRequest struct {
+	Created       *time.Time          `json:"created,omitempty"`
+	EndDate       *interface{}        `json:"end_date,omitempty"`
+	RequestId     *openapi_types.UUID `json:"request_id,omitempty"`
+	StartDate     *interface{}        `json:"start_date,omitempty"`
+	Status        *string             `json:"status,omitempty"`
+	TargetAccount *string             `json:"target_account,omitempty"`
+	TargetOrg     *string             `json:"target_org,omitempty"`
+}
+
+// CrossAccountRequestByAccount defines model for CrossAccountRequestByAccount.
+type CrossAccountRequestByAccount struct {
+	Created       *time.Time          `json:"created,omitempty"`
+	Email         *string             `json:"email,omitempty"`
+	EndDate       *interface{}        `json:"end_date,omitempty"`
+	FirstName     *string             `json:"first_name,omitempty"`
+	LastName      *string             `json:"last_name,omitempty"`
+	RequestId     *openapi_types.UUID `json:"request_id,omitempty"`
+	StartDate     *interface{}        `json:"start_date,omitempty"`
+	Status        *string             `json:"status,omitempty"`
+	TargetAccount *string             `json:"target_account,omitempty"`
+	TargetOrg     *string             `json:"target_org,omitempty"`
+}
+
+// CrossAccountRequestByUserId defines model for CrossAccountRequestByUserId.
+type CrossAccountRequestByUserId struct {
+	Created       *time.Time          `json:"created,omitempty"`
+	EndDate       *interface{}        `json:"end_date,omitempty"`
+	RequestId     *openapi_types.UUID `json:"request_id,omitempty"`
+	StartDate     *interface{}        `json:"start_date,omitempty"`
+	Status        *string             `json:"status,omitempty"`
+	TargetAccount *string             `json:"target_account,omitempty"`
+	TargetOrg     *string             `json:"target_org,omitempty"`
+	UserId        *string             `json:"user_id,omitempty"`
+}
+
+// CrossAccountRequestDetail defines model for CrossAccountRequestDetail.
+type CrossAccountRequestDetail struct {
+	union json.RawMessage
+}
+
+// CrossAccountRequestDetailByAccount defines model for CrossAccountRequestDetailByAccount.
+type CrossAccountRequestDetailByAccount struct {
+	Created   *time.Time          `json:"created,omitempty"`
+	Email     *interface{}        `json:"email,omitempty"`
+	EndDate   *string             `json:"end_date,omitempty"`
+	FirstName *interface{}        `json:"first_name,omitempty"`
+	LastName  *interface{}        `json:"last_name,omitempty"`
+	RequestId *openapi_types.UUID `json:"request_id,omitempty"`
+	Roles     *[]struct {
+		Description *string       `json:"description,omitempty"`
+		DisplayName *string       `json:"display_name,omitempty"`
+		Permissions *[]Permission `json:"permissions,omitempty"`
+	} `json:"roles,omitempty"`
+	StartDate     *string `json:"start_date,omitempty"`
+	Status        *string `json:"status,omitempty"`
+	TargetAccount *string `json:"target_account,omitempty"`
+	TargetOrg     *string `json:"target_org,omitempty"`
+}
+
+// CrossAccountRequestDetailByUseId defines model for CrossAccountRequestDetailByUseId.
+type CrossAccountRequestDetailByUseId struct {
+	Created   *time.Time          `json:"created,omitempty"`
+	EndDate   *string             `json:"end_date,omitempty"`
+	RequestId *openapi_types.UUID `json:"request_id,omitempty"`
+	Roles     *[]struct {
+		Description *string       `json:"description,omitempty"`
+		DisplayName *string       `json:"display_name,omitempty"`
+		Permissions *[]Permission `json:"permissions,omitempty"`
+	} `json:"roles,omitempty"`
+	StartDate     *string      `json:"start_date,omitempty"`
+	Status        *string      `json:"status,omitempty"`
+	TargetAccount *string      `json:"target_account,omitempty"`
+	TargetOrg     *string      `json:"target_org,omitempty"`
+	UserId        *interface{} `json:"user_id,omitempty"`
+}
+
+// CrossAccountRequestIn defines model for CrossAccountRequestIn.
+type CrossAccountRequestIn struct {
+	EndDate       string   `json:"end_date"`
+	Roles         []string `json:"roles"`
+	StartDate     string   `json:"start_date"`
+	TargetAccount string   `json:"target_account"`
+	TargetOrg     *string  `json:"target_org,omitempty"`
+}
+
+// CrossAccountRequestOut defines model for CrossAccountRequestOut.
+type CrossAccountRequestOut struct {
+	Created   *time.Time          `json:"created,omitempty"`
+	EndDate   *string             `json:"end_date,omitempty"`
+	RequestId *openapi_types.UUID `json:"request_id,omitempty"`
+	Roles     *[]struct {
+		Description *string       `json:"description,omitempty"`
+		DisplayName *string       `json:"display_name,omitempty"`
+		Permissions *[]Permission `json:"permissions,omitempty"`
+	} `json:"roles,omitempty"`
+	StartDate     *string `json:"start_date,omitempty"`
+	Status        *string `json:"status,omitempty"`
+	TargetAccount *string `json:"target_account,omitempty"`
+	TargetOrg     *string `json:"target_org,omitempty"`
+	UserId        *string `json:"user_id,omitempty"`
+}
+
+// CrossAccountRequestPagination defines model for CrossAccountRequestPagination.
+type CrossAccountRequestPagination struct {
+	Data  []CrossAccountRequestPagination_Data_Item `json:"data"`
+	Links *PaginationLinks                          `json:"links,omitempty"`
+	Meta  *PaginationMeta                           `json:"meta,omitempty"`
+}
+
+// CrossAccountRequestPagination_Data_Item defines model for CrossAccountRequestPagination.data.Item.
+type CrossAccountRequestPagination_Data_Item struct {
+	union json.RawMessage
+}
+
+// CrossAccountRequestPatch defines model for CrossAccountRequestPatch.
+type CrossAccountRequestPatch struct {
+	EndDate   *string                         `json:"end_date,omitempty"`
+	Roles     *[]string                       `json:"roles,omitempty"`
+	StartDate *string                         `json:"start_date,omitempty"`
+	Status    *CrossAccountRequestPatchStatus `json:"status,omitempty"`
+}
+
+// CrossAccountRequestPatchStatus defines model for CrossAccountRequestPatch.Status.
+type CrossAccountRequestPatchStatus string
+
+// CrossAccountRequestUpdateIn defines model for CrossAccountRequestUpdateIn.
+type CrossAccountRequestUpdateIn struct {
+	EndDate   string   `json:"end_date"`
+	Roles     []string `json:"roles"`
+	StartDate string   `json:"start_date"`
+}
+
+// CrossAccountRequestWithRoles defines model for CrossAccountRequestWithRoles.
+type CrossAccountRequestWithRoles struct {
+	Created   *time.Time          `json:"created,omitempty"`
+	EndDate   *string             `json:"end_date,omitempty"`
+	RequestId *openapi_types.UUID `json:"request_id,omitempty"`
+	Roles     *[]struct {
+		Description *string       `json:"description,omitempty"`
+		DisplayName *string       `json:"display_name,omitempty"`
+		Permissions *[]Permission `json:"permissions,omitempty"`
+	} `json:"roles,omitempty"`
+	StartDate     *string `json:"start_date,omitempty"`
+	Status        *string `json:"status,omitempty"`
+	TargetAccount *string `json:"target_account,omitempty"`
+	TargetOrg     *string `json:"target_org,omitempty"`
+}
 
 // Error defines model for Error.
 type Error struct {
@@ -103,6 +464,20 @@ type Error403 struct {
 	Errors []struct {
 		Detail *string `json:"detail,omitempty"`
 		Source *string `json:"source,omitempty"`
+		Status *string `json:"status,omitempty"`
+	} `json:"errors"`
+}
+
+// ErrorNotFound Error structure for the "Not Found" responses.
+type ErrorNotFound struct {
+	Errors []struct {
+		// Detail Detail of the error.
+		Detail *string `json:"detail,omitempty"`
+
+		// Source Source of the error.
+		Source *string `json:"source,omitempty"`
+
+		// Status Status of the response
 		Status *string `json:"status,omitempty"`
 	} `json:"errors"`
 }
@@ -134,28 +509,36 @@ type GroupPagination struct {
 	Meta  *PaginationMeta  `json:"meta,omitempty"`
 }
 
-// ListPagination defines model for ListPagination.
-type ListPagination struct {
+// GroupPrincipalIn defines model for GroupPrincipalIn.
+type GroupPrincipalIn struct {
+	Principals []PrincipalIn `json:"principals"`
+}
+
+// GroupRoleIn defines model for GroupRoleIn.
+type GroupRoleIn struct {
+	Roles []openapi_types.UUID `json:"roles"`
+}
+
+// GroupRolesPagination defines model for GroupRolesPagination.
+type GroupRolesPagination struct {
+	Data  []RoleOut        `json:"data"`
 	Links *PaginationLinks `json:"links,omitempty"`
 	Meta  *PaginationMeta  `json:"meta,omitempty"`
 }
 
-// OrgAdmin defines model for OrgAdmin.
-type OrgAdmin struct {
-	Email      *string `json:"email,omitempty"`
-	FirstName  *string `json:"first_name,omitempty"`
-	Id         *int    `json:"id,omitempty"`
-	IsActive   *bool   `json:"is_active,omitempty"`
-	IsInternal *bool   `json:"is_internal,omitempty"`
-	IsOrgAdmin *bool   `json:"is_org_admin,omitempty"`
-	LastName   *string `json:"last_name,omitempty"`
-	Locale     *string `json:"locale,omitempty"`
-	Username   *string `json:"username,omitempty"`
+// GroupWithPrincipalsAndRoles defines model for GroupWithPrincipalsAndRoles.
+type GroupWithPrincipalsAndRoles struct {
+	Created     time.Time          `json:"created"`
+	Description *string            `json:"description,omitempty"`
+	Modified    time.Time          `json:"modified"`
+	Name        string             `json:"name"`
+	Principals  []Principal        `json:"principals"`
+	Roles       []RoleOut          `json:"roles"`
+	Uuid        openapi_types.UUID `json:"uuid"`
 }
 
-// OrgAdminPagination defines model for OrgAdminPagination.
-type OrgAdminPagination struct {
-	Data  []OrgAdmin       `json:"data"`
+// ListPagination defines model for ListPagination.
+type ListPagination struct {
 	Links *PaginationLinks `json:"links,omitempty"`
 	Meta  *PaginationMeta  `json:"meta,omitempty"`
 }
@@ -173,14 +556,86 @@ type PaginationMeta struct {
 	Count *int64 `json:"count,omitempty"`
 }
 
+// Permission defines model for Permission.
+type Permission struct {
+	Application  *string `json:"application,omitempty"`
+	Description  *string `json:"description,omitempty"`
+	Permission   *string `json:"permission,omitempty"`
+	ResourceType *string `json:"resource_type,omitempty"`
+	Verb         *string `json:"verb,omitempty"`
+}
+
+// PermissionOptionsPagination defines model for PermissionOptionsPagination.
+type PermissionOptionsPagination struct {
+	Data  []string         `json:"data"`
+	Links *PaginationLinks `json:"links,omitempty"`
+	Meta  *PaginationMeta  `json:"meta,omitempty"`
+}
+
+// PermissionPagination defines model for PermissionPagination.
+type PermissionPagination struct {
+	Data  []Permission     `json:"data"`
+	Links *PaginationLinks `json:"links,omitempty"`
+	Meta  *PaginationMeta  `json:"meta,omitempty"`
+}
+
+// Policy defines model for Policy.
+type Policy struct {
+	Description *string `json:"description,omitempty"`
+	Name        string  `json:"name"`
+}
+
+// PolicyExtended defines model for PolicyExtended.
+type PolicyExtended struct {
+	Created     time.Time          `json:"created"`
+	Description *string            `json:"description,omitempty"`
+	Group       GroupOut           `json:"group"`
+	Modified    time.Time          `json:"modified"`
+	Name        string             `json:"name"`
+	Roles       []RoleOut          `json:"roles"`
+	Uuid        openapi_types.UUID `json:"uuid"`
+}
+
+// PolicyIn defines model for PolicyIn.
+type PolicyIn struct {
+	Description *string              `json:"description,omitempty"`
+	Group       openapi_types.UUID   `json:"group"`
+	Name        string               `json:"name"`
+	Roles       []openapi_types.UUID `json:"roles"`
+}
+
+// PolicyPagination defines model for PolicyPagination.
+type PolicyPagination struct {
+	Data  []PolicyExtended `json:"data"`
+	Links *PaginationLinks `json:"links,omitempty"`
+	Meta  *PaginationMeta  `json:"meta,omitempty"`
+}
+
 // Principal defines model for Principal.
 type Principal struct {
-	Email      openapi_types.Email `json:"email"`
-	FirstName  *string             `json:"first_name,omitempty"`
-	IsActive   *bool               `json:"is_active,omitempty"`
-	IsOrgAdmin *bool               `json:"is_org_admin,omitempty"`
-	LastName   *string             `json:"last_name,omitempty"`
-	Username   string              `json:"username"`
+	Email            openapi_types.Email         `json:"email"`
+	ExternalSourceId *Principal_ExternalSourceId `json:"external_source_id,omitempty"`
+	FirstName        *string                     `json:"first_name,omitempty"`
+	IsActive         *bool                       `json:"is_active,omitempty"`
+	IsOrgAdmin       *bool                       `json:"is_org_admin,omitempty"`
+	LastName         *string                     `json:"last_name,omitempty"`
+	Username         string                      `json:"username"`
+}
+
+// PrincipalExternalSourceId0 defines model for .
+type PrincipalExternalSourceId0 = string
+
+// PrincipalExternalSourceId1 defines model for .
+type PrincipalExternalSourceId1 = int
+
+// Principal_ExternalSourceId defines model for Principal.ExternalSourceId.
+type Principal_ExternalSourceId struct {
+	union json.RawMessage
+}
+
+// PrincipalIn defines model for PrincipalIn.
+type PrincipalIn struct {
+	Username string `json:"username"`
 }
 
 // PrincipalMinimal defines model for PrincipalMinimal.
@@ -200,11 +655,34 @@ type PrincipalPagination_Data_Item struct {
 	union json.RawMessage
 }
 
+// ResourceDefinition defines model for ResourceDefinition.
+type ResourceDefinition struct {
+	AttributeFilter ResourceDefinitionFilter `json:"attributeFilter"`
+}
+
+// ResourceDefinitionFilter defines model for ResourceDefinitionFilter.
+type ResourceDefinitionFilter struct {
+	Key       string                            `json:"key"`
+	Operation ResourceDefinitionFilterOperation `json:"operation"`
+	Value     string                            `json:"value"`
+}
+
+// ResourceDefinitionFilterOperation defines model for ResourceDefinitionFilter.Operation.
+type ResourceDefinitionFilterOperation string
+
 // Role defines model for Role.
 type Role struct {
 	Description *string `json:"description,omitempty"`
 	DisplayName *string `json:"display_name,omitempty"`
 	Name        string  `json:"name"`
+}
+
+// RoleIn defines model for RoleIn.
+type RoleIn struct {
+	Access      []Access `json:"access"`
+	Description *string  `json:"description,omitempty"`
+	DisplayName *string  `json:"display_name,omitempty"`
+	Name        string   `json:"name"`
 }
 
 // RoleOut defines model for RoleOut.
@@ -215,6 +693,8 @@ type RoleOut struct {
 	Created         time.Time          `json:"created"`
 	Description     *string            `json:"description,omitempty"`
 	DisplayName     *string            `json:"display_name,omitempty"`
+	ExternalRoleId  *string            `json:"external_role_id,omitempty"`
+	ExternalTenant  *string            `json:"external_tenant,omitempty"`
 	Modified        time.Time          `json:"modified"`
 	Name            string             `json:"name"`
 	PlatformDefault *bool              `json:"platform_default,omitempty"`
@@ -223,25 +703,64 @@ type RoleOut struct {
 	Uuid            openapi_types.UUID `json:"uuid"`
 }
 
-// RolePagination defines model for RolePagination.
-type RolePagination struct {
-	Data  []RoleOut        `json:"data"`
+// RoleOutDynamic defines model for RoleOutDynamic.
+type RoleOutDynamic struct {
+	Access          *[]Access          `json:"access,omitempty"`
+	AccessCount     int                `json:"accessCount"`
+	AdminDefault    bool               `json:"admin_default"`
+	Applications    []string           `json:"applications"`
+	Created         time.Time          `json:"created"`
+	Description     *string            `json:"description,omitempty"`
+	DisplayName     *string            `json:"display_name,omitempty"`
+	ExternalRoleId  *string            `json:"external_role_id,omitempty"`
+	ExternalTenant  *string            `json:"external_tenant,omitempty"`
+	GroupsIn        *[]AdditionalGroup `json:"groups_in,omitempty"`
+	GroupsInCount   *int               `json:"groups_in_count,omitempty"`
+	Modified        time.Time          `json:"modified"`
+	Name            string             `json:"name"`
+	PlatformDefault bool               `json:"platform_default"`
+	PolicyCount     int                `json:"policyCount"`
+	System          bool               `json:"system"`
+	Uuid            openapi_types.UUID `json:"uuid"`
+}
+
+// RolePaginationDynamic defines model for RolePaginationDynamic.
+type RolePaginationDynamic struct {
+	Data  []RoleOutDynamic `json:"data"`
 	Links *PaginationLinks `json:"links,omitempty"`
 	Meta  *PaginationMeta  `json:"meta,omitempty"`
 }
 
-// Tenant defines model for Tenant.
-type Tenant struct {
-	AccountId *int `json:"account_id,omitempty"`
-	Id        *int `json:"id,omitempty"`
-	OrgId     *int `json:"org_id,omitempty"`
+// RolePatch defines model for RolePatch.
+type RolePatch struct {
+	Description *string `json:"description,omitempty"`
+	DisplayName *string `json:"display_name,omitempty"`
+	Name        *string `json:"name,omitempty"`
 }
 
-// TenantPagination defines model for TenantPagination.
-type TenantPagination struct {
-	Data  []Tenant         `json:"data"`
-	Links *PaginationLinks `json:"links,omitempty"`
-	Meta  *PaginationMeta  `json:"meta,omitempty"`
+// RoleWithAccess defines model for RoleWithAccess.
+type RoleWithAccess struct {
+	Access          []Access           `json:"access"`
+	AccessCount     *int               `json:"accessCount,omitempty"`
+	AdminDefault    *bool              `json:"admin_default,omitempty"`
+	Applications    *[]string          `json:"applications,omitempty"`
+	Created         time.Time          `json:"created"`
+	Description     *string            `json:"description,omitempty"`
+	DisplayName     *string            `json:"display_name,omitempty"`
+	ExternalRoleId  *string            `json:"external_role_id,omitempty"`
+	ExternalTenant  *string            `json:"external_tenant,omitempty"`
+	Modified        time.Time          `json:"modified"`
+	Name            string             `json:"name"`
+	PlatformDefault *bool              `json:"platform_default,omitempty"`
+	PolicyCount     *int               `json:"policyCount,omitempty"`
+	System          *bool              `json:"system,omitempty"`
+	Uuid            openapi_types.UUID `json:"uuid"`
+}
+
+// Status defines model for Status.
+type Status struct {
+	ApiVersion int64   `json:"api_version"`
+	Commit     *string `json:"commit,omitempty"`
 }
 
 // Timestamped defines model for Timestamped.
@@ -255,16 +774,43 @@ type UUID struct {
 	Uuid openapi_types.UUID `json:"uuid"`
 }
 
+// GroupNameFilter defines model for GroupNameFilter.
+type GroupNameFilter = string
+
+// GroupUUIDFilter defines model for GroupUUIDFilter.
+type GroupUUIDFilter = openapi_types.UUID
+
+// NameFilter defines model for NameFilter.
+type NameFilter = string
+
+// NameMatchCriteria defines model for NameMatchCriteria.
+type NameMatchCriteria string
+
 // QueryLimit defines model for QueryLimit.
 type QueryLimit = int
 
 // QueryOffset defines model for QueryOffset.
 type QueryOffset = int
 
-// ListOrgAdminsParams defines parameters for ListOrgAdmins.
-type ListOrgAdminsParams struct {
-	// Type Parameter for retrieving org admins based on account or org.
-	Type ListOrgAdminsParamsType `form:"type" json:"type"`
+// ScopeFilter defines model for ScopeFilter.
+type ScopeFilter string
+
+// SystemFilter defines model for SystemFilter.
+type SystemFilter = bool
+
+// GetPrincipalAccessParams defines parameters for GetPrincipalAccess.
+type GetPrincipalAccessParams struct {
+	// Application The application name(s) to obtain access for the principal. This is an exact match. When no application is supplied, all permissions for the principal are returned. You may also use a comma-separated list to match on multiple applications.
+	Application string `form:"application" json:"application"`
+
+	// Username Unique username of the principal to obtain access for (only available for admins, and if supplied, takes precedence over the identity header).
+	Username *string `form:"username,omitempty" json:"username,omitempty"`
+
+	// OrderBy Parameter for ordering roles by value. For inverse ordering, supply '-' before the param value, such as: ?order_by=-application
+	OrderBy *GetPrincipalAccessParamsOrderBy `form:"order_by,omitempty" json:"order_by,omitempty"`
+
+	// Status Set the status of users to get back.
+	Status *GetPrincipalAccessParamsStatus `form:"status,omitempty" json:"status,omitempty"`
 
 	// Limit Parameter for selecting the amount of data returned.
 	Limit *QueryLimit `form:"limit,omitempty" json:"limit,omitempty"`
@@ -273,20 +819,68 @@ type ListOrgAdminsParams struct {
 	Offset *QueryOffset `form:"offset,omitempty" json:"offset,omitempty"`
 }
 
-// ListOrgAdminsParamsType defines parameters for ListOrgAdmins.
-type ListOrgAdminsParamsType string
+// GetPrincipalAccessParamsOrderBy defines parameters for GetPrincipalAccess.
+type GetPrincipalAccessParamsOrderBy string
 
-// ListTenantsParams defines parameters for ListTenants.
-type ListTenantsParams struct {
-	// ModifiedOnly Parameter for filtering tenants by those with group or role modifications.
-	ModifiedOnly *bool `form:"modified_only,omitempty" json:"modified_only,omitempty"`
+// GetPrincipalAccessParamsStatus defines parameters for GetPrincipalAccess.
+type GetPrincipalAccessParamsStatus string
 
+// ListCrossAccountRequestsParams defines parameters for ListCrossAccountRequests.
+type ListCrossAccountRequestsParams struct {
 	// Limit Parameter for selecting the amount of data returned.
 	Limit *QueryLimit `form:"limit,omitempty" json:"limit,omitempty"`
 
 	// Offset Parameter for selecting the offset of data.
 	Offset *QueryOffset `form:"offset,omitempty" json:"offset,omitempty"`
+
+	// QueryBy Parameter for filtering resource by either a user's ID, or a client's org. The default value is target_org.
+	QueryBy *ListCrossAccountRequestsParamsQueryBy `form:"query_by,omitempty" json:"query_by,omitempty"`
+
+	// Account Parameter for filtering resource by an account number. Value can be a comma-separated list of ids. To be used in tandem with ?query_by=user_id to further filter a user's requests by account number.
+	Account *string `form:"account,omitempty" json:"account,omitempty"`
+
+	// OrgId Parameter for filtering resource by an org id. Value can be a comma-separated list of ids. To be used in tandem with ?query_by=user_id to further filter a user's requests by org id.
+	OrgId *string `form:"org_id,omitempty" json:"org_id,omitempty"`
+
+	// ApprovedOnly Parameter for filtering resource which have been approved.
+	ApprovedOnly *ListCrossAccountRequestsParamsApprovedOnly `form:"approved_only,omitempty" json:"approved_only,omitempty"`
+
+	// Status Parameter for filtering resource based on status.
+	Status *ListCrossAccountRequestsParamsStatus `form:"status,omitempty" json:"status,omitempty"`
+
+	// OrderBy Parameter for ordering by field. For inverse ordering, use '-', e.g. ?order_by=-start_date.
+	OrderBy *ListCrossAccountRequestsParamsOrderBy `form:"order_by,omitempty" json:"order_by,omitempty"`
 }
+
+// ListCrossAccountRequestsParamsQueryBy defines parameters for ListCrossAccountRequests.
+type ListCrossAccountRequestsParamsQueryBy string
+
+// ListCrossAccountRequestsParamsApprovedOnly defines parameters for ListCrossAccountRequests.
+type ListCrossAccountRequestsParamsApprovedOnly string
+
+// ListCrossAccountRequestsParamsStatus defines parameters for ListCrossAccountRequests.
+type ListCrossAccountRequestsParamsStatus string
+
+// ListCrossAccountRequestsParamsOrderBy defines parameters for ListCrossAccountRequests.
+type ListCrossAccountRequestsParamsOrderBy string
+
+// GetCrossAccountRequestParams defines parameters for GetCrossAccountRequest.
+type GetCrossAccountRequestParams struct {
+	// QueryBy Parameter for filtering resource by either a user's ID, or a client's org. The default value is target_org.
+	QueryBy *GetCrossAccountRequestParamsQueryBy `form:"query_by,omitempty" json:"query_by,omitempty"`
+
+	// Account Parameter for filtering resource by an account number. Value can be a comma-separated list of ids. To be used in tandem with ?query_by=user_id to further filter a user's requests by account number.
+	Account *string `form:"account,omitempty" json:"account,omitempty"`
+
+	// ApprovedOnly Parameter for filtering resource which have been approved.
+	ApprovedOnly *GetCrossAccountRequestParamsApprovedOnly `form:"approved_only,omitempty" json:"approved_only,omitempty"`
+}
+
+// GetCrossAccountRequestParamsQueryBy defines parameters for GetCrossAccountRequest.
+type GetCrossAccountRequestParamsQueryBy string
+
+// GetCrossAccountRequestParamsApprovedOnly defines parameters for GetCrossAccountRequest.
+type GetCrossAccountRequestParamsApprovedOnly string
 
 // ListGroupsParams defines parameters for ListGroups.
 type ListGroupsParams struct {
@@ -296,24 +890,66 @@ type ListGroupsParams struct {
 	// Offset Parameter for selecting the offset of data.
 	Offset *QueryOffset `form:"offset,omitempty" json:"offset,omitempty"`
 
+	// Name Parameter for filtering resource by name using string contains search.
+	Name *NameFilter `form:"name,omitempty" json:"name,omitempty"`
+
+	// NameMatch Parameter for specifying the matching criteria for an object's name or display_name.
+	NameMatch *ListGroupsParamsNameMatch `form:"name_match,omitempty" json:"name_match,omitempty"`
+
+	// Scope Parameter for filtering resource by scope.
+	Scope *ListGroupsParamsScope `form:"scope,omitempty" json:"scope,omitempty"`
+
+	// Username A username for a principal to filter for groups
+	Username *string `form:"username,omitempty" json:"username,omitempty"`
+
+	// ExcludeUsername A username for a principal to filter for groups where principal is not a member and can be added manually
+	ExcludeUsername *string `form:"exclude_username,omitempty" json:"exclude_username,omitempty"`
+
 	// Uuid A list of UUIDs to filter listed groups.
 	Uuid *[]string `form:"uuid,omitempty" json:"uuid,omitempty"`
+
+	// RoleNames List of role name to filter for groups. It is exact match but case-insensitive
+	RoleNames *[]string `form:"role_names,omitempty" json:"role_names,omitempty"`
+
+	// RoleDiscriminator Discriminator that works with role_names to indicate matching all/any of the role names
+	RoleDiscriminator *ListGroupsParamsRoleDiscriminator `form:"role_discriminator,omitempty" json:"role_discriminator,omitempty"`
 
 	// OrderBy Parameter for ordering groups by value. For inverse ordering, supply '-' before the param value, such as: ?order_by=-name
 	OrderBy *ListGroupsParamsOrderBy `form:"order_by,omitempty" json:"order_by,omitempty"`
 
-	// Username Optional parameter for filtering by username
-	Username *string `form:"username,omitempty" json:"username,omitempty"`
+	// PlatformDefault An optional flag to return either platform default or non-platform default groups.
+	PlatformDefault *bool `form:"platform_default,omitempty" json:"platform_default,omitempty"`
 
-	// System Parameter for filtering resource by system flag.
+	// AdminDefault An optional flag to return either admin default or non-admin default groups.
+	AdminDefault *bool `form:"admin_default,omitempty" json:"admin_default,omitempty"`
+
+	// System An optional flag to return either system or non-system groups.
 	System *bool `form:"system,omitempty" json:"system,omitempty"`
 }
+
+// ListGroupsParamsNameMatch defines parameters for ListGroups.
+type ListGroupsParamsNameMatch string
+
+// ListGroupsParamsScope defines parameters for ListGroups.
+type ListGroupsParamsScope string
+
+// ListGroupsParamsRoleDiscriminator defines parameters for ListGroups.
+type ListGroupsParamsRoleDiscriminator string
 
 // ListGroupsParamsOrderBy defines parameters for ListGroups.
 type ListGroupsParamsOrderBy string
 
-// ListPrincipalsForGroupParams defines parameters for ListPrincipalsForGroup.
-type ListPrincipalsForGroupParams struct {
+// DeletePrincipalFromGroupParams defines parameters for DeletePrincipalFromGroup.
+type DeletePrincipalFromGroupParams struct {
+	// Usernames A comma separated list of usernames for principals to remove from the group
+	Usernames string `form:"usernames" json:"usernames"`
+}
+
+// GetPrincipalsFromGroupParams defines parameters for GetPrincipalsFromGroup.
+type GetPrincipalsFromGroupParams struct {
+	// AdminOnly Get only admin users within an account.
+	AdminOnly *GetPrincipalsFromGroupParamsAdminOnly `form:"admin_only,omitempty" json:"admin_only,omitempty"`
+
 	// PrincipalUsername Parameter for filtering group principals by principal `username` using string contains search.
 	PrincipalUsername *string `form:"principal_username,omitempty" json:"principal_username,omitempty"`
 
@@ -324,25 +960,46 @@ type ListPrincipalsForGroupParams struct {
 	Offset *QueryOffset `form:"offset,omitempty" json:"offset,omitempty"`
 
 	// OrderBy Parameter for ordering principals by value. For inverse ordering, supply '-' before the param value, such as: ?order_by=-username
-	OrderBy *ListPrincipalsForGroupParamsOrderBy `form:"order_by,omitempty" json:"order_by,omitempty"`
+	OrderBy *GetPrincipalsFromGroupParamsOrderBy `form:"order_by,omitempty" json:"order_by,omitempty"`
 
 	// UsernameOnly Parameter for optionally returning only usernames for principals, bypassing a call to IT.
-	UsernameOnly *ListPrincipalsForGroupParamsUsernameOnly `form:"username_only,omitempty" json:"username_only,omitempty"`
+	UsernameOnly *GetPrincipalsFromGroupParamsUsernameOnly `form:"username_only,omitempty" json:"username_only,omitempty"`
 }
 
-// ListPrincipalsForGroupParamsOrderBy defines parameters for ListPrincipalsForGroup.
-type ListPrincipalsForGroupParamsOrderBy string
+// GetPrincipalsFromGroupParamsAdminOnly defines parameters for GetPrincipalsFromGroup.
+type GetPrincipalsFromGroupParamsAdminOnly string
 
-// ListPrincipalsForGroupParamsUsernameOnly defines parameters for ListPrincipalsForGroup.
-type ListPrincipalsForGroupParamsUsernameOnly bool
+// GetPrincipalsFromGroupParamsOrderBy defines parameters for GetPrincipalsFromGroup.
+type GetPrincipalsFromGroupParamsOrderBy string
+
+// GetPrincipalsFromGroupParamsUsernameOnly defines parameters for GetPrincipalsFromGroup.
+type GetPrincipalsFromGroupParamsUsernameOnly bool
+
+// DeleteRoleFromGroupParams defines parameters for DeleteRoleFromGroup.
+type DeleteRoleFromGroupParams struct {
+	// Roles A comma separated list of role UUIDs for roles to remove from the group
+	Roles string `form:"roles" json:"roles"`
+}
 
 // ListRolesForGroupParams defines parameters for ListRolesForGroup.
 type ListRolesForGroupParams struct {
+	// Exclude If this is set to true, the result would be roles excluding the ones in the group
+	Exclude *bool `form:"exclude,omitempty" json:"exclude,omitempty"`
+
 	// RoleName Parameter for filtering group roles by role `name` using string contains search.
 	RoleName *string `form:"role_name,omitempty" json:"role_name,omitempty"`
 
+	// RoleDisplayName Parameter for filtering group roles by role `display_name` using string contains search.
+	RoleDisplayName *string `form:"role_display_name,omitempty" json:"role_display_name,omitempty"`
+
 	// RoleDescription Parameter for filtering group roles by role `description` using string contains search.
 	RoleDescription *string `form:"role_description,omitempty" json:"role_description,omitempty"`
+
+	// RoleSystem Parameter for filtering group roles by system flag.
+	RoleSystem *bool `form:"role_system,omitempty" json:"role_system,omitempty"`
+
+	// RoleExternalTenant Parameter for filtering group roles by role `external_tenant` using string search.
+	RoleExternalTenant *string `form:"role_external_tenant,omitempty" json:"role_external_tenant,omitempty"`
 
 	// Limit Parameter for selecting the amount of data returned.
 	Limit *QueryLimit `form:"limit,omitempty" json:"limit,omitempty"`
@@ -352,106 +1009,463 @@ type ListRolesForGroupParams struct {
 
 	// OrderBy Parameter for ordering roles by value. For inverse ordering, supply '-' before the param value, such as: ?order_by=-name
 	OrderBy *ListRolesForGroupParamsOrderBy `form:"order_by,omitempty" json:"order_by,omitempty"`
-
-	// RoleExternalTenant Parameter for filtering group roles by role `external_tenant` using string search.
-	RoleExternalTenant *string `form:"role_external_tenant,omitempty" json:"role_external_tenant,omitempty"`
-
-	// Username Optional parameter for filtering by username
-	Username *string `form:"username,omitempty" json:"username,omitempty"`
 }
 
 // ListRolesForGroupParamsOrderBy defines parameters for ListRolesForGroup.
 type ListRolesForGroupParamsOrderBy string
 
-// ListGroupsForPrincipalParams defines parameters for ListGroupsForPrincipal.
-type ListGroupsForPrincipalParams struct {
+// ListPermissionsParams defines parameters for ListPermissions.
+type ListPermissionsParams struct {
 	// Limit Parameter for selecting the amount of data returned.
 	Limit *QueryLimit `form:"limit,omitempty" json:"limit,omitempty"`
 
 	// Offset Parameter for selecting the offset of data.
 	Offset *QueryOffset `form:"offset,omitempty" json:"offset,omitempty"`
 
-	// Uuid A list of UUIDs to filter listed groups.
-	Uuid *[]string `form:"uuid,omitempty" json:"uuid,omitempty"`
+	// OrderBy Parameter for ordering permissions by value. For inverse ordering, supply '-' before the param value, such as: ?order_by=-application
+	OrderBy *ListPermissionsParamsOrderBy `form:"order_by,omitempty" json:"order_by,omitempty"`
 
-	// OrderBy Parameter for ordering groups by value. For inverse ordering, supply '-' before the param value, such as: ?order_by=-name
-	OrderBy *ListGroupsForPrincipalParamsOrderBy `form:"order_by,omitempty" json:"order_by,omitempty"`
+	// Application Exact match for the application name of a permission. You may also use a comma-separated list to match on multiple applications.
+	Application *string `form:"application,omitempty" json:"application,omitempty"`
+
+	// ResourceType Exact match for the resource type name of a permission. You may also use a comma-separated list to match on multiple resource_types.
+	ResourceType *string `form:"resource_type,omitempty" json:"resource_type,omitempty"`
+
+	// Verb Exact match for the operation verb name of a permission You may also use a comma-separated list to match on multiple verbs.
+	Verb *string `form:"verb,omitempty" json:"verb,omitempty"`
+
+	// Permission Partial match for the aggregate permission value name of a permission object.
+	Permission *string `form:"permission,omitempty" json:"permission,omitempty"`
+
+	// ExcludeGlobals If set to 'true', this will exclude any permission with a global allowance on either 'application', 'resource_type' or 'verb'. The default is 'false'.
+	ExcludeGlobals *ListPermissionsParamsExcludeGlobals `form:"exclude_globals,omitempty" json:"exclude_globals,omitempty"`
+
+	// ExcludeRoles An optional string filter which accepts one or more role UUIDs, comma-separated, to return permissions not associated with the supplied role(s).
+	ExcludeRoles *string `form:"exclude_roles,omitempty" json:"exclude_roles,omitempty"`
+
+	// AllowedOnly If set to 'true', this will exclude any permission with a role where the 'application' is not in the role create allow list.
+	AllowedOnly *ListPermissionsParamsAllowedOnly `form:"allowed_only,omitempty" json:"allowed_only,omitempty"`
 }
 
-// ListGroupsForPrincipalParamsOrderBy defines parameters for ListGroupsForPrincipal.
-type ListGroupsForPrincipalParamsOrderBy string
+// ListPermissionsParamsOrderBy defines parameters for ListPermissions.
+type ListPermissionsParamsOrderBy string
 
-// ListRolesForGroupsForPrincipalParams defines parameters for ListRolesForGroupsForPrincipal.
-type ListRolesForGroupsForPrincipalParams struct {
-	// RoleName Parameter for filtering group roles by role `name` using string contains search.
-	RoleName *string `form:"role_name,omitempty" json:"role_name,omitempty"`
+// ListPermissionsParamsExcludeGlobals defines parameters for ListPermissions.
+type ListPermissionsParamsExcludeGlobals string
 
+// ListPermissionsParamsAllowedOnly defines parameters for ListPermissions.
+type ListPermissionsParamsAllowedOnly string
+
+// ListPermissionOptionsParams defines parameters for ListPermissionOptions.
+type ListPermissionOptionsParams struct {
 	// Limit Parameter for selecting the amount of data returned.
 	Limit *QueryLimit `form:"limit,omitempty" json:"limit,omitempty"`
 
 	// Offset Parameter for selecting the offset of data.
 	Offset *QueryOffset `form:"offset,omitempty" json:"offset,omitempty"`
 
-	// OrderBy Parameter for ordering roles by value. For inverse ordering, supply '-' before the param value, such as: ?order_by=-name
-	OrderBy *ListRolesForGroupsForPrincipalParamsOrderBy `form:"order_by,omitempty" json:"order_by,omitempty"`
+	// Field specify which fields of permission to display
+	Field ListPermissionOptionsParamsField `form:"field" json:"field"`
+
+	// Application Filter returned options based on application. You may also use a comma-separated list to filter on multiple applications.
+	Application *string `form:"application,omitempty" json:"application,omitempty"`
+
+	// ResourceType Filter returned options based on resource_type. You may also use a comma-separated list to filter on multiple resource_types.
+	ResourceType *string `form:"resource_type,omitempty" json:"resource_type,omitempty"`
+
+	// Verb Filter returned options based on verb. You may also use a comma-separated list to filter on multiple verbs.
+	Verb *string `form:"verb,omitempty" json:"verb,omitempty"`
+
+	// ExcludeGlobals If set to 'true', this will exclude any permission option with a global allowance on the supplied '?field=' value of 'application', 'resource_type' or 'verb'. The default is 'false'.
+	ExcludeGlobals *ListPermissionOptionsParamsExcludeGlobals `form:"exclude_globals,omitempty" json:"exclude_globals,omitempty"`
+
+	// AllowedOnly If set to 'true', this will exclude any permission with a role where the 'application' is not in the role create allow list.
+	AllowedOnly *ListPermissionOptionsParamsAllowedOnly `form:"allowed_only,omitempty" json:"allowed_only,omitempty"`
 }
 
-// ListRolesForGroupsForPrincipalParamsOrderBy defines parameters for ListRolesForGroupsForPrincipal.
-type ListRolesForGroupsForPrincipalParamsOrderBy string
+// ListPermissionOptionsParamsField defines parameters for ListPermissionOptions.
+type ListPermissionOptionsParamsField string
 
-// ListRoleParams defines parameters for ListRole.
-type ListRoleParams struct {
-	// Name Parameter for filtering roles by role `name` using string contains search.
-	Name *string `form:"name,omitempty" json:"name,omitempty"`
+// ListPermissionOptionsParamsExcludeGlobals defines parameters for ListPermissionOptions.
+type ListPermissionOptionsParamsExcludeGlobals string
+
+// ListPermissionOptionsParamsAllowedOnly defines parameters for ListPermissionOptions.
+type ListPermissionOptionsParamsAllowedOnly string
+
+// ListPoliciesParams defines parameters for ListPolicies.
+type ListPoliciesParams struct {
+	// Limit Parameter for selecting the amount of data returned.
+	Limit *QueryLimit `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Offset Parameter for selecting the offset of data.
+	Offset *QueryOffset `form:"offset,omitempty" json:"offset,omitempty"`
+
+	// Name Parameter for filtering resource by name using string contains search.
+	Name *NameFilter `form:"name,omitempty" json:"name,omitempty"`
+
+	// Scope Parameter for filtering resource by scope.
+	Scope *ListPoliciesParamsScope `form:"scope,omitempty" json:"scope,omitempty"`
+
+	// GroupName Parameter for filtering resource by group name using string contains search.
+	GroupName *GroupNameFilter `form:"group_name,omitempty" json:"group_name,omitempty"`
+
+	// GroupUuid Parameter for filtering resource by group uuid using UUID exact match.
+	GroupUuid *GroupUUIDFilter `form:"group_uuid,omitempty" json:"group_uuid,omitempty"`
+
+	// OrderBy Parameter for ordering policies by value. For inverse ordering, supply '-' before the param value, such as: ?order_by=-name
+	OrderBy *ListPoliciesParamsOrderBy `form:"order_by,omitempty" json:"order_by,omitempty"`
+}
+
+// ListPoliciesParamsScope defines parameters for ListPolicies.
+type ListPoliciesParamsScope string
+
+// ListPoliciesParamsOrderBy defines parameters for ListPolicies.
+type ListPoliciesParamsOrderBy string
+
+// ListPrincipalsParams defines parameters for ListPrincipals.
+type ListPrincipalsParams struct {
+	// Limit Parameter for selecting the amount of data returned.
+	Limit *QueryLimit `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Offset Parameter for selecting the offset of data.
+	Offset *QueryOffset `form:"offset,omitempty" json:"offset,omitempty"`
+
+	// MatchCriteria Parameter for specifying the matching criteria for an object's name and/or email. Currently, match_criteria of partial searches for a username/email using "starts with" pattern.
+	MatchCriteria *ListPrincipalsParamsMatchCriteria `form:"match_criteria,omitempty" json:"match_criteria,omitempty"`
+
+	// Usernames Comma separated usernames of principals to get. If match_criteria is specified, only the first username will be picked up for search.
+	Usernames *string `form:"usernames,omitempty" json:"usernames,omitempty"`
+
+	// SortOrder The sort order of the query, either ascending or descending. Defaults to ascending.
+	SortOrder *ListPrincipalsParamsSortOrder `form:"sort_order,omitempty" json:"sort_order,omitempty"`
+
+	// Email E-mail address of principal to search for. Could be combined with match_criteria for searching.
+	Email *string `form:"email,omitempty" json:"email,omitempty"`
+
+	// Status Set the status of users to get back.
+	Status *ListPrincipalsParamsStatus `form:"status,omitempty" json:"status,omitempty"`
+
+	// AdminOnly Get only admin users within an account. Setting this would ignore the parameters: usernames, email
+	AdminOnly *ListPrincipalsParamsAdminOnly `form:"admin_only,omitempty" json:"admin_only,omitempty"`
+
+	// OrderBy Parameter for ordering principals by value. For inverse ordering, supply '-' before the param value, such as: ?order_by=-username
+	OrderBy *ListPrincipalsParamsOrderBy `form:"order_by,omitempty" json:"order_by,omitempty"`
+
+	// UsernameOnly Parameter for optionally returning only usernames for principals, bypassing a call to IT.
+	UsernameOnly *ListPrincipalsParamsUsernameOnly `form:"username_only,omitempty" json:"username_only,omitempty"`
+}
+
+// ListPrincipalsParamsMatchCriteria defines parameters for ListPrincipals.
+type ListPrincipalsParamsMatchCriteria string
+
+// ListPrincipalsParamsSortOrder defines parameters for ListPrincipals.
+type ListPrincipalsParamsSortOrder string
+
+// ListPrincipalsParamsStatus defines parameters for ListPrincipals.
+type ListPrincipalsParamsStatus string
+
+// ListPrincipalsParamsAdminOnly defines parameters for ListPrincipals.
+type ListPrincipalsParamsAdminOnly string
+
+// ListPrincipalsParamsOrderBy defines parameters for ListPrincipals.
+type ListPrincipalsParamsOrderBy string
+
+// ListPrincipalsParamsUsernameOnly defines parameters for ListPrincipals.
+type ListPrincipalsParamsUsernameOnly bool
+
+// ListRolesParams defines parameters for ListRoles.
+type ListRolesParams struct {
+	// Limit Parameter for selecting the amount of data returned.
+	Limit *QueryLimit `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Offset Parameter for selecting the offset of data.
+	Offset *QueryOffset `form:"offset,omitempty" json:"offset,omitempty"`
+
+	// Name Parameter for filtering resource by name using string contains search.
+	Name *NameFilter `form:"name,omitempty" json:"name,omitempty"`
+
+	// System Parameter for filtering resource by system flag.
+	System *SystemFilter `form:"system,omitempty" json:"system,omitempty"`
 
 	// DisplayName Parameter for filtering resource by display_name using string contains search.
 	DisplayName *string `form:"display_name,omitempty" json:"display_name,omitempty"`
 
-	// System Parameter for filtering resource by system flag.
-	System *bool `form:"system,omitempty" json:"system,omitempty"`
-
 	// NameMatch Parameter for specifying the matching criteria for an object's name or display_name.
-	NameMatch *ListRoleParamsNameMatch `form:"name_match,omitempty" json:"name_match,omitempty"`
+	NameMatch *ListRolesParamsNameMatch `form:"name_match,omitempty" json:"name_match,omitempty"`
 
 	// Scope Parameter for filtering resource by scope.
-	Scope *ListRoleParamsScope `form:"scope,omitempty" json:"scope,omitempty"`
-
-	// Limit Parameter for selecting the amount of data returned.
-	Limit *QueryLimit `form:"limit,omitempty" json:"limit,omitempty"`
-
-	// Offset Parameter for selecting the offset of data.
-	Offset *QueryOffset `form:"offset,omitempty" json:"offset,omitempty"`
+	Scope *ListRolesParamsScope `form:"scope,omitempty" json:"scope,omitempty"`
 
 	// OrderBy Parameter for ordering roles by value. For inverse ordering, supply '-' before the param value, such as: ?order_by=-name
-	OrderBy *ListRoleParamsOrderBy `form:"order_by,omitempty" json:"order_by,omitempty"`
+	OrderBy *ListRolesParamsOrderBy `form:"order_by,omitempty" json:"order_by,omitempty"`
 
 	// AddFields Parameter for add list of fields to display for roles.
-	AddFields *ListRoleParamsAddFields `form:"add_fields,omitempty" json:"add_fields,omitempty"`
+	AddFields *[]ListRolesParamsAddFields `form:"add_fields,omitempty" json:"add_fields,omitempty"`
 
-	// Username Optional parameter for filtering by username
+	// Username Unique username of the principal to obtain roles for (only available for admins, and if supplied, takes precedence over the identity header).
 	Username *string `form:"username,omitempty" json:"username,omitempty"`
 
-	// Application The application name(s) to filter roles by, from permissions. This is an exact match. You may also use a comma-separated list to match on multiple applications.
+	// Application The application name(s) to filter roles by, from permissions or external tenant name. This is an exact match. You may also use a comma-separated list to match on multiple applications.
 	Application *string `form:"application,omitempty" json:"application,omitempty"`
 
-	// Permission The permission(s) to filter roles by, from permissions. This is an exact match. You may also use a comma-separated list to match on multiple permissions.
+	// Permission The permission(s) to filter roles by. This is an exact match. You may also use a comma-separated list to match on multiple permissions.
 	Permission *string `form:"permission,omitempty" json:"permission,omitempty"`
 
 	// ExternalTenant Parameter for filtering roles by external tenant name using string search.
 	ExternalTenant *string `form:"external_tenant,omitempty" json:"external_tenant,omitempty"`
 }
 
-// ListRoleParamsNameMatch defines parameters for ListRole.
-type ListRoleParamsNameMatch string
+// ListRolesParamsNameMatch defines parameters for ListRoles.
+type ListRolesParamsNameMatch string
 
-// ListRoleParamsScope defines parameters for ListRole.
-type ListRoleParamsScope string
+// ListRolesParamsScope defines parameters for ListRoles.
+type ListRolesParamsScope string
 
-// ListRoleParamsOrderBy defines parameters for ListRole.
-type ListRoleParamsOrderBy string
+// ListRolesParamsOrderBy defines parameters for ListRoles.
+type ListRolesParamsOrderBy string
 
-// ListRoleParamsAddFields defines parameters for ListRole.
-type ListRoleParamsAddFields string
+// ListRolesParamsAddFields defines parameters for ListRoles.
+type ListRolesParamsAddFields string
+
+// GetRoleParams defines parameters for GetRole.
+type GetRoleParams struct {
+	// Scope Parameter for filtering resource by scope.
+	Scope *GetRoleParamsScope `form:"scope,omitempty" json:"scope,omitempty"`
+}
+
+// GetRoleParamsScope defines parameters for GetRole.
+type GetRoleParamsScope string
+
+// GetRoleAccessParams defines parameters for GetRoleAccess.
+type GetRoleAccessParams struct {
+	// Limit Parameter for selecting the amount of data returned.
+	Limit *QueryLimit `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Offset Parameter for selecting the offset of data.
+	Offset *QueryOffset `form:"offset,omitempty" json:"offset,omitempty"`
+}
+
+// CreateCrossAccountRequestsJSONRequestBody defines body for CreateCrossAccountRequests for application/json ContentType.
+type CreateCrossAccountRequestsJSONRequestBody = CrossAccountRequestIn
+
+// PatchCrossAccountRequestJSONRequestBody defines body for PatchCrossAccountRequest for application/json ContentType.
+type PatchCrossAccountRequestJSONRequestBody = CrossAccountRequestPatch
+
+// PutCrossAccountRequestJSONRequestBody defines body for PutCrossAccountRequest for application/json ContentType.
+type PutCrossAccountRequestJSONRequestBody = CrossAccountRequestUpdateIn
+
+// CreateGroupJSONRequestBody defines body for CreateGroup for application/json ContentType.
+type CreateGroupJSONRequestBody = Group
+
+// UpdateGroupJSONRequestBody defines body for UpdateGroup for application/json ContentType.
+type UpdateGroupJSONRequestBody = Group
+
+// AddPrincipalToGroupJSONRequestBody defines body for AddPrincipalToGroup for application/json ContentType.
+type AddPrincipalToGroupJSONRequestBody = GroupPrincipalIn
+
+// AddRoleToGroupJSONRequestBody defines body for AddRoleToGroup for application/json ContentType.
+type AddRoleToGroupJSONRequestBody = GroupRoleIn
+
+// CreatePoliciesJSONRequestBody defines body for CreatePolicies for application/json ContentType.
+type CreatePoliciesJSONRequestBody = PolicyIn
+
+// UpdatePolicyJSONRequestBody defines body for UpdatePolicy for application/json ContentType.
+type UpdatePolicyJSONRequestBody = PolicyIn
+
+// CreateRoleJSONRequestBody defines body for CreateRole for application/json ContentType.
+type CreateRoleJSONRequestBody = RoleIn
+
+// PatchRoleJSONRequestBody defines body for PatchRole for application/json ContentType.
+type PatchRoleJSONRequestBody = RolePatch
+
+// UpdateRoleJSONRequestBody defines body for UpdateRole for application/json ContentType.
+type UpdateRoleJSONRequestBody = RoleWithAccess
+
+// AsCrossAccountRequestDetailByAccount returns the union data inside the CrossAccountRequestDetail as a CrossAccountRequestDetailByAccount
+func (t CrossAccountRequestDetail) AsCrossAccountRequestDetailByAccount() (CrossAccountRequestDetailByAccount, error) {
+	var body CrossAccountRequestDetailByAccount
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromCrossAccountRequestDetailByAccount overwrites any union data inside the CrossAccountRequestDetail as the provided CrossAccountRequestDetailByAccount
+func (t *CrossAccountRequestDetail) FromCrossAccountRequestDetailByAccount(v CrossAccountRequestDetailByAccount) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeCrossAccountRequestDetailByAccount performs a merge with any union data inside the CrossAccountRequestDetail, using the provided CrossAccountRequestDetailByAccount
+func (t *CrossAccountRequestDetail) MergeCrossAccountRequestDetailByAccount(v CrossAccountRequestDetailByAccount) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JsonMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsCrossAccountRequestDetailByUseId returns the union data inside the CrossAccountRequestDetail as a CrossAccountRequestDetailByUseId
+func (t CrossAccountRequestDetail) AsCrossAccountRequestDetailByUseId() (CrossAccountRequestDetailByUseId, error) {
+	var body CrossAccountRequestDetailByUseId
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromCrossAccountRequestDetailByUseId overwrites any union data inside the CrossAccountRequestDetail as the provided CrossAccountRequestDetailByUseId
+func (t *CrossAccountRequestDetail) FromCrossAccountRequestDetailByUseId(v CrossAccountRequestDetailByUseId) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeCrossAccountRequestDetailByUseId performs a merge with any union data inside the CrossAccountRequestDetail, using the provided CrossAccountRequestDetailByUseId
+func (t *CrossAccountRequestDetail) MergeCrossAccountRequestDetailByUseId(v CrossAccountRequestDetailByUseId) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JsonMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t CrossAccountRequestDetail) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *CrossAccountRequestDetail) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsCrossAccountRequestByAccount returns the union data inside the CrossAccountRequestPagination_Data_Item as a CrossAccountRequestByAccount
+func (t CrossAccountRequestPagination_Data_Item) AsCrossAccountRequestByAccount() (CrossAccountRequestByAccount, error) {
+	var body CrossAccountRequestByAccount
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromCrossAccountRequestByAccount overwrites any union data inside the CrossAccountRequestPagination_Data_Item as the provided CrossAccountRequestByAccount
+func (t *CrossAccountRequestPagination_Data_Item) FromCrossAccountRequestByAccount(v CrossAccountRequestByAccount) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeCrossAccountRequestByAccount performs a merge with any union data inside the CrossAccountRequestPagination_Data_Item, using the provided CrossAccountRequestByAccount
+func (t *CrossAccountRequestPagination_Data_Item) MergeCrossAccountRequestByAccount(v CrossAccountRequestByAccount) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JsonMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsCrossAccountRequestByUserId returns the union data inside the CrossAccountRequestPagination_Data_Item as a CrossAccountRequestByUserId
+func (t CrossAccountRequestPagination_Data_Item) AsCrossAccountRequestByUserId() (CrossAccountRequestByUserId, error) {
+	var body CrossAccountRequestByUserId
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromCrossAccountRequestByUserId overwrites any union data inside the CrossAccountRequestPagination_Data_Item as the provided CrossAccountRequestByUserId
+func (t *CrossAccountRequestPagination_Data_Item) FromCrossAccountRequestByUserId(v CrossAccountRequestByUserId) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeCrossAccountRequestByUserId performs a merge with any union data inside the CrossAccountRequestPagination_Data_Item, using the provided CrossAccountRequestByUserId
+func (t *CrossAccountRequestPagination_Data_Item) MergeCrossAccountRequestByUserId(v CrossAccountRequestByUserId) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JsonMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t CrossAccountRequestPagination_Data_Item) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *CrossAccountRequestPagination_Data_Item) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsPrincipalExternalSourceId0 returns the union data inside the Principal_ExternalSourceId as a PrincipalExternalSourceId0
+func (t Principal_ExternalSourceId) AsPrincipalExternalSourceId0() (PrincipalExternalSourceId0, error) {
+	var body PrincipalExternalSourceId0
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromPrincipalExternalSourceId0 overwrites any union data inside the Principal_ExternalSourceId as the provided PrincipalExternalSourceId0
+func (t *Principal_ExternalSourceId) FromPrincipalExternalSourceId0(v PrincipalExternalSourceId0) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergePrincipalExternalSourceId0 performs a merge with any union data inside the Principal_ExternalSourceId, using the provided PrincipalExternalSourceId0
+func (t *Principal_ExternalSourceId) MergePrincipalExternalSourceId0(v PrincipalExternalSourceId0) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JsonMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsPrincipalExternalSourceId1 returns the union data inside the Principal_ExternalSourceId as a PrincipalExternalSourceId1
+func (t Principal_ExternalSourceId) AsPrincipalExternalSourceId1() (PrincipalExternalSourceId1, error) {
+	var body PrincipalExternalSourceId1
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromPrincipalExternalSourceId1 overwrites any union data inside the Principal_ExternalSourceId as the provided PrincipalExternalSourceId1
+func (t *Principal_ExternalSourceId) FromPrincipalExternalSourceId1(v PrincipalExternalSourceId1) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergePrincipalExternalSourceId1 performs a merge with any union data inside the Principal_ExternalSourceId, using the provided PrincipalExternalSourceId1
+func (t *Principal_ExternalSourceId) MergePrincipalExternalSourceId1(v PrincipalExternalSourceId1) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JsonMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t Principal_ExternalSourceId) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *Principal_ExternalSourceId) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
 
 // AsPrincipal returns the union data inside the PrincipalPagination_Data_Item as a Principal
 func (t PrincipalPagination_Data_Item) AsPrincipal() (Principal, error) {
@@ -517,81 +1531,306 @@ func (t *PrincipalPagination_Data_Item) UnmarshalJSON(b []byte) error {
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
-	// Get a list of Org Admins for an account or organization
-	// (GET /api/utils/get_org_admin/{org_or_account}/)
-	ListOrgAdmins(w http.ResponseWriter, r *http.Request, orgOrAccount string, params ListOrgAdminsParams)
-	// Get a list of tenants
-	// (GET /integrations/tenant/)
-	ListTenants(w http.ResponseWriter, r *http.Request, params ListTenantsParams)
+	// Get the permitted access for a principal in the tenant (defaults to principal from the identity header)
+	// (GET /access/)
+	GetPrincipalAccess(w http.ResponseWriter, r *http.Request, params GetPrincipalAccessParams)
+	// List the cross account requests for a user or account
+	// (GET /cross-account-requests/)
+	ListCrossAccountRequests(w http.ResponseWriter, r *http.Request, params ListCrossAccountRequestsParams)
+	// Create a cross account request
+	// (POST /cross-account-requests/)
+	CreateCrossAccountRequests(w http.ResponseWriter, r *http.Request)
+	// Get a cross account request
+	// (GET /cross-account-requests/{uuid}/)
+	GetCrossAccountRequest(w http.ResponseWriter, r *http.Request, uuid openapi_types.UUID, params GetCrossAccountRequestParams)
+	// Patch a cross account request
+	// (PATCH /cross-account-requests/{uuid}/)
+	PatchCrossAccountRequest(w http.ResponseWriter, r *http.Request, uuid openapi_types.UUID)
+	// Update a cross account request
+	// (PUT /cross-account-requests/{uuid}/)
+	PutCrossAccountRequest(w http.ResponseWriter, r *http.Request, uuid openapi_types.UUID)
 	// List the groups for a tenant
-	// (GET /integrations/tenant/{orgId}/groups/)
-	ListGroups(w http.ResponseWriter, r *http.Request, orgId string, params ListGroupsParams)
-	// Get a list of principals from a group in a tenant
-	// (GET /integrations/tenant/{orgId}/groups/{uuid}/principals/)
-	ListPrincipalsForGroup(w http.ResponseWriter, r *http.Request, orgId string, uuid openapi_types.UUID, params ListPrincipalsForGroupParams)
-	// List the roles for a group in a tenant
-	// (GET /integrations/tenant/{orgId}/groups/{uuid}/roles/)
-	ListRolesForGroup(w http.ResponseWriter, r *http.Request, orgId string, uuid openapi_types.UUID, params ListRolesForGroupParams)
-	// List the groups for a principal in a tenant
-	// (GET /integrations/tenant/{orgId}/principal/{username}/groups/)
-	ListGroupsForPrincipal(w http.ResponseWriter, r *http.Request, orgId string, username string, params ListGroupsForPrincipalParams)
-	// List the roles for a group for a principal in a tenant
-	// (GET /integrations/tenant/{orgId}/principal/{username}/groups/{uuid}/roles/)
-	ListRolesForGroupsForPrincipal(w http.ResponseWriter, r *http.Request, orgId string, username string, uuid openapi_types.UUID, params ListRolesForGroupsForPrincipalParams)
+	// (GET /groups/)
+	ListGroups(w http.ResponseWriter, r *http.Request, params ListGroupsParams)
+	// Create a group in a tenant
+	// (POST /groups/)
+	CreateGroup(w http.ResponseWriter, r *http.Request)
+	// Delete a group in the tenant
+	// (DELETE /groups/{uuid}/)
+	DeleteGroup(w http.ResponseWriter, r *http.Request, uuid openapi_types.UUID)
+	// Get a group in the tenant
+	// (GET /groups/{uuid}/)
+	GetGroup(w http.ResponseWriter, r *http.Request, uuid openapi_types.UUID)
+	// Update a group in the tenant
+	// (PUT /groups/{uuid}/)
+	UpdateGroup(w http.ResponseWriter, r *http.Request, uuid openapi_types.UUID)
+	// Remove a principal from a group in the tenant
+	// (DELETE /groups/{uuid}/principals/)
+	DeletePrincipalFromGroup(w http.ResponseWriter, r *http.Request, uuid openapi_types.UUID, params DeletePrincipalFromGroupParams)
+	// Get a list of principals from a group in the tenant
+	// (GET /groups/{uuid}/principals/)
+	GetPrincipalsFromGroup(w http.ResponseWriter, r *http.Request, uuid openapi_types.UUID, params GetPrincipalsFromGroupParams)
+	// Add a principal to a group in the tenant
+	// (POST /groups/{uuid}/principals/)
+	AddPrincipalToGroup(w http.ResponseWriter, r *http.Request, uuid openapi_types.UUID)
+	// Remove a role from a group in the tenant
+	// (DELETE /groups/{uuid}/roles/)
+	DeleteRoleFromGroup(w http.ResponseWriter, r *http.Request, uuid openapi_types.UUID, params DeleteRoleFromGroupParams)
+	// List the roles for a group in the tenant
+	// (GET /groups/{uuid}/roles/)
+	ListRolesForGroup(w http.ResponseWriter, r *http.Request, uuid openapi_types.UUID, params ListRolesForGroupParams)
+	// Add a role to a group in the tenant
+	// (POST /groups/{uuid}/roles/)
+	AddRoleToGroup(w http.ResponseWriter, r *http.Request, uuid openapi_types.UUID)
+	// List the permissions for a tenant
+	// (GET /permissions/)
+	ListPermissions(w http.ResponseWriter, r *http.Request, params ListPermissionsParams)
+	// List the available options for fields of permissions for a tenant
+	// (GET /permissions/options/)
+	ListPermissionOptions(w http.ResponseWriter, r *http.Request, params ListPermissionOptionsParams)
+	// List the policies in the tenant
+	// (GET /policies/)
+	ListPolicies(w http.ResponseWriter, r *http.Request, params ListPoliciesParams)
+	// Create a policy in a tenant
+	// (POST /policies/)
+	CreatePolicies(w http.ResponseWriter, r *http.Request)
+	// Delete a policy in the tenant
+	// (DELETE /policies/{uuid}/)
+	DeletePolicy(w http.ResponseWriter, r *http.Request, uuid openapi_types.UUID)
+	// Get a policy in the tenant
+	// (GET /policies/{uuid}/)
+	GetPolicy(w http.ResponseWriter, r *http.Request, uuid openapi_types.UUID)
+	// Update a policy in the tenant
+	// (PUT /policies/{uuid}/)
+	UpdatePolicy(w http.ResponseWriter, r *http.Request, uuid openapi_types.UUID)
+	// List the principals for a tenant
+	// (GET /principals/)
+	ListPrincipals(w http.ResponseWriter, r *http.Request, params ListPrincipalsParams)
 	// List the roles for a tenant
-	// (GET /integrations/tenant/{orgId}/roles/)
-	ListRole(w http.ResponseWriter, r *http.Request, orgId string, params ListRoleParams)
+	// (GET /roles/)
+	ListRoles(w http.ResponseWriter, r *http.Request, params ListRolesParams)
+	// Create a role for a tenant
+	// (POST /roles/)
+	CreateRole(w http.ResponseWriter, r *http.Request)
+	// Delete a role in the tenant
+	// (DELETE /roles/{uuid}/)
+	DeleteRole(w http.ResponseWriter, r *http.Request, uuid openapi_types.UUID)
+	// Get a role in the tenant
+	// (GET /roles/{uuid}/)
+	GetRole(w http.ResponseWriter, r *http.Request, uuid openapi_types.UUID, params GetRoleParams)
+	// Patch a role in the tenant
+	// (PATCH /roles/{uuid}/)
+	PatchRole(w http.ResponseWriter, r *http.Request, uuid openapi_types.UUID)
+	// Update a role in the tenant
+	// (PUT /roles/{uuid}/)
+	UpdateRole(w http.ResponseWriter, r *http.Request, uuid openapi_types.UUID)
+	// Get access for a role in the tenant
+	// (GET /roles/{uuid}/access/)
+	GetRoleAccess(w http.ResponseWriter, r *http.Request, uuid openapi_types.UUID, params GetRoleAccessParams)
+	// Obtain server status
+	// (GET /status/)
+	GetStatus(w http.ResponseWriter, r *http.Request)
 }
 
 // Unimplemented server implementation that returns http.StatusNotImplemented for each endpoint.
 
 type Unimplemented struct{}
 
-// Get a list of Org Admins for an account or organization
-// (GET /api/utils/get_org_admin/{org_or_account}/)
-func (_ Unimplemented) ListOrgAdmins(w http.ResponseWriter, r *http.Request, orgOrAccount string, params ListOrgAdminsParams) {
+// Get the permitted access for a principal in the tenant (defaults to principal from the identity header)
+// (GET /access/)
+func (_ Unimplemented) GetPrincipalAccess(w http.ResponseWriter, r *http.Request, params GetPrincipalAccessParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Get a list of tenants
-// (GET /integrations/tenant/)
-func (_ Unimplemented) ListTenants(w http.ResponseWriter, r *http.Request, params ListTenantsParams) {
+// List the cross account requests for a user or account
+// (GET /cross-account-requests/)
+func (_ Unimplemented) ListCrossAccountRequests(w http.ResponseWriter, r *http.Request, params ListCrossAccountRequestsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Create a cross account request
+// (POST /cross-account-requests/)
+func (_ Unimplemented) CreateCrossAccountRequests(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Get a cross account request
+// (GET /cross-account-requests/{uuid}/)
+func (_ Unimplemented) GetCrossAccountRequest(w http.ResponseWriter, r *http.Request, uuid openapi_types.UUID, params GetCrossAccountRequestParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Patch a cross account request
+// (PATCH /cross-account-requests/{uuid}/)
+func (_ Unimplemented) PatchCrossAccountRequest(w http.ResponseWriter, r *http.Request, uuid openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Update a cross account request
+// (PUT /cross-account-requests/{uuid}/)
+func (_ Unimplemented) PutCrossAccountRequest(w http.ResponseWriter, r *http.Request, uuid openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // List the groups for a tenant
-// (GET /integrations/tenant/{orgId}/groups/)
-func (_ Unimplemented) ListGroups(w http.ResponseWriter, r *http.Request, orgId string, params ListGroupsParams) {
+// (GET /groups/)
+func (_ Unimplemented) ListGroups(w http.ResponseWriter, r *http.Request, params ListGroupsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Get a list of principals from a group in a tenant
-// (GET /integrations/tenant/{orgId}/groups/{uuid}/principals/)
-func (_ Unimplemented) ListPrincipalsForGroup(w http.ResponseWriter, r *http.Request, orgId string, uuid openapi_types.UUID, params ListPrincipalsForGroupParams) {
+// Create a group in a tenant
+// (POST /groups/)
+func (_ Unimplemented) CreateGroup(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// List the roles for a group in a tenant
-// (GET /integrations/tenant/{orgId}/groups/{uuid}/roles/)
-func (_ Unimplemented) ListRolesForGroup(w http.ResponseWriter, r *http.Request, orgId string, uuid openapi_types.UUID, params ListRolesForGroupParams) {
+// Delete a group in the tenant
+// (DELETE /groups/{uuid}/)
+func (_ Unimplemented) DeleteGroup(w http.ResponseWriter, r *http.Request, uuid openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// List the groups for a principal in a tenant
-// (GET /integrations/tenant/{orgId}/principal/{username}/groups/)
-func (_ Unimplemented) ListGroupsForPrincipal(w http.ResponseWriter, r *http.Request, orgId string, username string, params ListGroupsForPrincipalParams) {
+// Get a group in the tenant
+// (GET /groups/{uuid}/)
+func (_ Unimplemented) GetGroup(w http.ResponseWriter, r *http.Request, uuid openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// List the roles for a group for a principal in a tenant
-// (GET /integrations/tenant/{orgId}/principal/{username}/groups/{uuid}/roles/)
-func (_ Unimplemented) ListRolesForGroupsForPrincipal(w http.ResponseWriter, r *http.Request, orgId string, username string, uuid openapi_types.UUID, params ListRolesForGroupsForPrincipalParams) {
+// Update a group in the tenant
+// (PUT /groups/{uuid}/)
+func (_ Unimplemented) UpdateGroup(w http.ResponseWriter, r *http.Request, uuid openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Remove a principal from a group in the tenant
+// (DELETE /groups/{uuid}/principals/)
+func (_ Unimplemented) DeletePrincipalFromGroup(w http.ResponseWriter, r *http.Request, uuid openapi_types.UUID, params DeletePrincipalFromGroupParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Get a list of principals from a group in the tenant
+// (GET /groups/{uuid}/principals/)
+func (_ Unimplemented) GetPrincipalsFromGroup(w http.ResponseWriter, r *http.Request, uuid openapi_types.UUID, params GetPrincipalsFromGroupParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Add a principal to a group in the tenant
+// (POST /groups/{uuid}/principals/)
+func (_ Unimplemented) AddPrincipalToGroup(w http.ResponseWriter, r *http.Request, uuid openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Remove a role from a group in the tenant
+// (DELETE /groups/{uuid}/roles/)
+func (_ Unimplemented) DeleteRoleFromGroup(w http.ResponseWriter, r *http.Request, uuid openapi_types.UUID, params DeleteRoleFromGroupParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List the roles for a group in the tenant
+// (GET /groups/{uuid}/roles/)
+func (_ Unimplemented) ListRolesForGroup(w http.ResponseWriter, r *http.Request, uuid openapi_types.UUID, params ListRolesForGroupParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Add a role to a group in the tenant
+// (POST /groups/{uuid}/roles/)
+func (_ Unimplemented) AddRoleToGroup(w http.ResponseWriter, r *http.Request, uuid openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List the permissions for a tenant
+// (GET /permissions/)
+func (_ Unimplemented) ListPermissions(w http.ResponseWriter, r *http.Request, params ListPermissionsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List the available options for fields of permissions for a tenant
+// (GET /permissions/options/)
+func (_ Unimplemented) ListPermissionOptions(w http.ResponseWriter, r *http.Request, params ListPermissionOptionsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List the policies in the tenant
+// (GET /policies/)
+func (_ Unimplemented) ListPolicies(w http.ResponseWriter, r *http.Request, params ListPoliciesParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Create a policy in a tenant
+// (POST /policies/)
+func (_ Unimplemented) CreatePolicies(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Delete a policy in the tenant
+// (DELETE /policies/{uuid}/)
+func (_ Unimplemented) DeletePolicy(w http.ResponseWriter, r *http.Request, uuid openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Get a policy in the tenant
+// (GET /policies/{uuid}/)
+func (_ Unimplemented) GetPolicy(w http.ResponseWriter, r *http.Request, uuid openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Update a policy in the tenant
+// (PUT /policies/{uuid}/)
+func (_ Unimplemented) UpdatePolicy(w http.ResponseWriter, r *http.Request, uuid openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List the principals for a tenant
+// (GET /principals/)
+func (_ Unimplemented) ListPrincipals(w http.ResponseWriter, r *http.Request, params ListPrincipalsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // List the roles for a tenant
-// (GET /integrations/tenant/{orgId}/roles/)
-func (_ Unimplemented) ListRole(w http.ResponseWriter, r *http.Request, orgId string, params ListRoleParams) {
+// (GET /roles/)
+func (_ Unimplemented) ListRoles(w http.ResponseWriter, r *http.Request, params ListRolesParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Create a role for a tenant
+// (POST /roles/)
+func (_ Unimplemented) CreateRole(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Delete a role in the tenant
+// (DELETE /roles/{uuid}/)
+func (_ Unimplemented) DeleteRole(w http.ResponseWriter, r *http.Request, uuid openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Get a role in the tenant
+// (GET /roles/{uuid}/)
+func (_ Unimplemented) GetRole(w http.ResponseWriter, r *http.Request, uuid openapi_types.UUID, params GetRoleParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Patch a role in the tenant
+// (PATCH /roles/{uuid}/)
+func (_ Unimplemented) PatchRole(w http.ResponseWriter, r *http.Request, uuid openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Update a role in the tenant
+// (PUT /roles/{uuid}/)
+func (_ Unimplemented) UpdateRole(w http.ResponseWriter, r *http.Request, uuid openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Get access for a role in the tenant
+// (GET /roles/{uuid}/access/)
+func (_ Unimplemented) GetRoleAccess(w http.ResponseWriter, r *http.Request, uuid openapi_types.UUID, params GetRoleAccessParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Obtain server status
+// (GET /status/)
+func (_ Unimplemented) GetStatus(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -604,36 +1843,53 @@ type ServerInterfaceWrapper struct {
 
 type MiddlewareFunc func(http.Handler) http.Handler
 
-// ListOrgAdmins operation middleware
-func (siw *ServerInterfaceWrapper) ListOrgAdmins(w http.ResponseWriter, r *http.Request) {
+// GetPrincipalAccess operation middleware
+func (siw *ServerInterfaceWrapper) GetPrincipalAccess(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	var err error
 
-	// ------------- Path parameter "org_or_account" -------------
-	var orgOrAccount string
-
-	err = runtime.BindStyledParameterWithLocation("simple", false, "org_or_account", runtime.ParamLocationPath, chi.URLParam(r, "org_or_account"), &orgOrAccount)
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "org_or_account", Err: err})
-		return
-	}
+	ctx = context.WithValue(ctx, Basic_authScopes, []string{})
 
 	// Parameter object where we will unmarshal all parameters from the context
-	var params ListOrgAdminsParams
+	var params GetPrincipalAccessParams
 
-	// ------------- Required query parameter "type" -------------
+	// ------------- Required query parameter "application" -------------
 
-	if paramValue := r.URL.Query().Get("type"); paramValue != "" {
+	if paramValue := r.URL.Query().Get("application"); paramValue != "" {
 
 	} else {
-		siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "type"})
+		siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "application"})
 		return
 	}
 
-	err = runtime.BindQueryParameter("form", true, true, "type", r.URL.Query(), &params.Type)
+	err = runtime.BindQueryParameter("form", true, true, "application", r.URL.Query(), &params.Application)
 	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "type", Err: err})
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "application", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "username" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "username", r.URL.Query(), &params.Username)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "username", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "order_by" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "order_by", r.URL.Query(), &params.OrderBy)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "order_by", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "status" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "status", r.URL.Query(), &params.Status)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "status", Err: err})
 		return
 	}
 
@@ -654,7 +1910,7 @@ func (siw *ServerInterfaceWrapper) ListOrgAdmins(w http.ResponseWriter, r *http.
 	}
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ListOrgAdmins(w, r, orgOrAccount, params)
+		siw.Handler.GetPrincipalAccess(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -664,22 +1920,16 @@ func (siw *ServerInterfaceWrapper) ListOrgAdmins(w http.ResponseWriter, r *http.
 	handler.ServeHTTP(w, r.WithContext(ctx))
 }
 
-// ListTenants operation middleware
-func (siw *ServerInterfaceWrapper) ListTenants(w http.ResponseWriter, r *http.Request) {
+// ListCrossAccountRequests operation middleware
+func (siw *ServerInterfaceWrapper) ListCrossAccountRequests(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	var err error
 
+	ctx = context.WithValue(ctx, Basic_authScopes, []string{})
+
 	// Parameter object where we will unmarshal all parameters from the context
-	var params ListTenantsParams
-
-	// ------------- Optional query parameter "modified_only" -------------
-
-	err = runtime.BindQueryParameter("form", true, false, "modified_only", r.URL.Query(), &params.ModifiedOnly)
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "modified_only", Err: err})
-		return
-	}
+	var params ListCrossAccountRequestsParams
 
 	// ------------- Optional query parameter "limit" -------------
 
@@ -697,8 +1947,184 @@ func (siw *ServerInterfaceWrapper) ListTenants(w http.ResponseWriter, r *http.Re
 		return
 	}
 
+	// ------------- Optional query parameter "query_by" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "query_by", r.URL.Query(), &params.QueryBy)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "query_by", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "account" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "account", r.URL.Query(), &params.Account)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "account", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "org_id" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "org_id", r.URL.Query(), &params.OrgId)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "org_id", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "approved_only" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "approved_only", r.URL.Query(), &params.ApprovedOnly)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "approved_only", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "status" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "status", r.URL.Query(), &params.Status)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "status", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "order_by" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "order_by", r.URL.Query(), &params.OrderBy)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "order_by", Err: err})
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ListTenants(w, r, params)
+		siw.Handler.ListCrossAccountRequests(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
+
+// CreateCrossAccountRequests operation middleware
+func (siw *ServerInterfaceWrapper) CreateCrossAccountRequests(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, Basic_authScopes, []string{})
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateCrossAccountRequests(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
+
+// GetCrossAccountRequest operation middleware
+func (siw *ServerInterfaceWrapper) GetCrossAccountRequest(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	var err error
+
+	// ------------- Path parameter "uuid" -------------
+	var uuid openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithLocation("simple", false, "uuid", runtime.ParamLocationPath, chi.URLParam(r, "uuid"), &uuid)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "uuid", Err: err})
+		return
+	}
+
+	ctx = context.WithValue(ctx, Basic_authScopes, []string{})
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetCrossAccountRequestParams
+
+	// ------------- Optional query parameter "query_by" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "query_by", r.URL.Query(), &params.QueryBy)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "query_by", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "account" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "account", r.URL.Query(), &params.Account)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "account", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "approved_only" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "approved_only", r.URL.Query(), &params.ApprovedOnly)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "approved_only", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetCrossAccountRequest(w, r, uuid, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
+
+// PatchCrossAccountRequest operation middleware
+func (siw *ServerInterfaceWrapper) PatchCrossAccountRequest(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	var err error
+
+	// ------------- Path parameter "uuid" -------------
+	var uuid openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithLocation("simple", false, "uuid", runtime.ParamLocationPath, chi.URLParam(r, "uuid"), &uuid)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "uuid", Err: err})
+		return
+	}
+
+	ctx = context.WithValue(ctx, Basic_authScopes, []string{})
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PatchCrossAccountRequest(w, r, uuid)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
+
+// PutCrossAccountRequest operation middleware
+func (siw *ServerInterfaceWrapper) PutCrossAccountRequest(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	var err error
+
+	// ------------- Path parameter "uuid" -------------
+	var uuid openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithLocation("simple", false, "uuid", runtime.ParamLocationPath, chi.URLParam(r, "uuid"), &uuid)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "uuid", Err: err})
+		return
+	}
+
+	ctx = context.WithValue(ctx, Basic_authScopes, []string{})
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PutCrossAccountRequest(w, r, uuid)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -714,14 +2140,7 @@ func (siw *ServerInterfaceWrapper) ListGroups(w http.ResponseWriter, r *http.Req
 
 	var err error
 
-	// ------------- Path parameter "orgId" -------------
-	var orgId string
-
-	err = runtime.BindStyledParameterWithLocation("simple", false, "orgId", runtime.ParamLocationPath, chi.URLParam(r, "orgId"), &orgId)
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "orgId", Err: err})
-		return
-	}
+	ctx = context.WithValue(ctx, Basic_authScopes, []string{})
 
 	// Parameter object where we will unmarshal all parameters from the context
 	var params ListGroupsParams
@@ -742,11 +2161,67 @@ func (siw *ServerInterfaceWrapper) ListGroups(w http.ResponseWriter, r *http.Req
 		return
 	}
 
+	// ------------- Optional query parameter "name" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "name", r.URL.Query(), &params.Name)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "name", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "name_match" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "name_match", r.URL.Query(), &params.NameMatch)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "name_match", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "scope" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "scope", r.URL.Query(), &params.Scope)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "scope", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "username" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "username", r.URL.Query(), &params.Username)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "username", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "exclude_username" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "exclude_username", r.URL.Query(), &params.ExcludeUsername)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "exclude_username", Err: err})
+		return
+	}
+
 	// ------------- Optional query parameter "uuid" -------------
 
 	err = runtime.BindQueryParameter("form", false, false, "uuid", r.URL.Query(), &params.Uuid)
 	if err != nil {
 		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "uuid", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "role_names" -------------
+
+	err = runtime.BindQueryParameter("form", false, false, "role_names", r.URL.Query(), &params.RoleNames)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "role_names", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "role_discriminator" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "role_discriminator", r.URL.Query(), &params.RoleDiscriminator)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "role_discriminator", Err: err})
 		return
 	}
 
@@ -758,11 +2233,19 @@ func (siw *ServerInterfaceWrapper) ListGroups(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	// ------------- Optional query parameter "username" -------------
+	// ------------- Optional query parameter "platform_default" -------------
 
-	err = runtime.BindQueryParameter("form", true, false, "username", r.URL.Query(), &params.Username)
+	err = runtime.BindQueryParameter("form", true, false, "platform_default", r.URL.Query(), &params.PlatformDefault)
 	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "username", Err: err})
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "platform_default", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "admin_default" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "admin_default", r.URL.Query(), &params.AdminDefault)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "admin_default", Err: err})
 		return
 	}
 
@@ -775,7 +2258,7 @@ func (siw *ServerInterfaceWrapper) ListGroups(w http.ResponseWriter, r *http.Req
 	}
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ListGroups(w, r, orgId, params)
+		siw.Handler.ListGroups(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -785,20 +2268,28 @@ func (siw *ServerInterfaceWrapper) ListGroups(w http.ResponseWriter, r *http.Req
 	handler.ServeHTTP(w, r.WithContext(ctx))
 }
 
-// ListPrincipalsForGroup operation middleware
-func (siw *ServerInterfaceWrapper) ListPrincipalsForGroup(w http.ResponseWriter, r *http.Request) {
+// CreateGroup operation middleware
+func (siw *ServerInterfaceWrapper) CreateGroup(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, Basic_authScopes, []string{})
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateGroup(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
+
+// DeleteGroup operation middleware
+func (siw *ServerInterfaceWrapper) DeleteGroup(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	var err error
-
-	// ------------- Path parameter "orgId" -------------
-	var orgId string
-
-	err = runtime.BindStyledParameterWithLocation("simple", false, "orgId", runtime.ParamLocationPath, chi.URLParam(r, "orgId"), &orgId)
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "orgId", Err: err})
-		return
-	}
 
 	// ------------- Path parameter "uuid" -------------
 	var uuid openapi_types.UUID
@@ -809,8 +2300,148 @@ func (siw *ServerInterfaceWrapper) ListPrincipalsForGroup(w http.ResponseWriter,
 		return
 	}
 
+	ctx = context.WithValue(ctx, Basic_authScopes, []string{})
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteGroup(w, r, uuid)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
+
+// GetGroup operation middleware
+func (siw *ServerInterfaceWrapper) GetGroup(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	var err error
+
+	// ------------- Path parameter "uuid" -------------
+	var uuid openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithLocation("simple", false, "uuid", runtime.ParamLocationPath, chi.URLParam(r, "uuid"), &uuid)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "uuid", Err: err})
+		return
+	}
+
+	ctx = context.WithValue(ctx, Basic_authScopes, []string{})
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetGroup(w, r, uuid)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
+
+// UpdateGroup operation middleware
+func (siw *ServerInterfaceWrapper) UpdateGroup(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	var err error
+
+	// ------------- Path parameter "uuid" -------------
+	var uuid openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithLocation("simple", false, "uuid", runtime.ParamLocationPath, chi.URLParam(r, "uuid"), &uuid)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "uuid", Err: err})
+		return
+	}
+
+	ctx = context.WithValue(ctx, Basic_authScopes, []string{})
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateGroup(w, r, uuid)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
+
+// DeletePrincipalFromGroup operation middleware
+func (siw *ServerInterfaceWrapper) DeletePrincipalFromGroup(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	var err error
+
+	// ------------- Path parameter "uuid" -------------
+	var uuid openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithLocation("simple", false, "uuid", runtime.ParamLocationPath, chi.URLParam(r, "uuid"), &uuid)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "uuid", Err: err})
+		return
+	}
+
+	ctx = context.WithValue(ctx, Basic_authScopes, []string{})
+
 	// Parameter object where we will unmarshal all parameters from the context
-	var params ListPrincipalsForGroupParams
+	var params DeletePrincipalFromGroupParams
+
+	// ------------- Required query parameter "usernames" -------------
+
+	if paramValue := r.URL.Query().Get("usernames"); paramValue != "" {
+
+	} else {
+		siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "usernames"})
+		return
+	}
+
+	err = runtime.BindQueryParameter("form", true, true, "usernames", r.URL.Query(), &params.Usernames)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "usernames", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeletePrincipalFromGroup(w, r, uuid, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
+
+// GetPrincipalsFromGroup operation middleware
+func (siw *ServerInterfaceWrapper) GetPrincipalsFromGroup(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	var err error
+
+	// ------------- Path parameter "uuid" -------------
+	var uuid openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithLocation("simple", false, "uuid", runtime.ParamLocationPath, chi.URLParam(r, "uuid"), &uuid)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "uuid", Err: err})
+		return
+	}
+
+	ctx = context.WithValue(ctx, Basic_authScopes, []string{})
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetPrincipalsFromGroupParams
+
+	// ------------- Optional query parameter "admin_only" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "admin_only", r.URL.Query(), &params.AdminOnly)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "admin_only", Err: err})
+		return
+	}
 
 	// ------------- Optional query parameter "principal_username" -------------
 
@@ -853,7 +2484,81 @@ func (siw *ServerInterfaceWrapper) ListPrincipalsForGroup(w http.ResponseWriter,
 	}
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ListPrincipalsForGroup(w, r, orgId, uuid, params)
+		siw.Handler.GetPrincipalsFromGroup(w, r, uuid, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
+
+// AddPrincipalToGroup operation middleware
+func (siw *ServerInterfaceWrapper) AddPrincipalToGroup(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	var err error
+
+	// ------------- Path parameter "uuid" -------------
+	var uuid openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithLocation("simple", false, "uuid", runtime.ParamLocationPath, chi.URLParam(r, "uuid"), &uuid)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "uuid", Err: err})
+		return
+	}
+
+	ctx = context.WithValue(ctx, Basic_authScopes, []string{})
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AddPrincipalToGroup(w, r, uuid)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
+
+// DeleteRoleFromGroup operation middleware
+func (siw *ServerInterfaceWrapper) DeleteRoleFromGroup(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	var err error
+
+	// ------------- Path parameter "uuid" -------------
+	var uuid openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithLocation("simple", false, "uuid", runtime.ParamLocationPath, chi.URLParam(r, "uuid"), &uuid)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "uuid", Err: err})
+		return
+	}
+
+	ctx = context.WithValue(ctx, Basic_authScopes, []string{})
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params DeleteRoleFromGroupParams
+
+	// ------------- Required query parameter "roles" -------------
+
+	if paramValue := r.URL.Query().Get("roles"); paramValue != "" {
+
+	} else {
+		siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "roles"})
+		return
+	}
+
+	err = runtime.BindQueryParameter("form", true, true, "roles", r.URL.Query(), &params.Roles)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "roles", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteRoleFromGroup(w, r, uuid, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -869,15 +2574,6 @@ func (siw *ServerInterfaceWrapper) ListRolesForGroup(w http.ResponseWriter, r *h
 
 	var err error
 
-	// ------------- Path parameter "orgId" -------------
-	var orgId string
-
-	err = runtime.BindStyledParameterWithLocation("simple", false, "orgId", runtime.ParamLocationPath, chi.URLParam(r, "orgId"), &orgId)
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "orgId", Err: err})
-		return
-	}
-
 	// ------------- Path parameter "uuid" -------------
 	var uuid openapi_types.UUID
 
@@ -887,14 +2583,32 @@ func (siw *ServerInterfaceWrapper) ListRolesForGroup(w http.ResponseWriter, r *h
 		return
 	}
 
+	ctx = context.WithValue(ctx, Basic_authScopes, []string{})
+
 	// Parameter object where we will unmarshal all parameters from the context
 	var params ListRolesForGroupParams
+
+	// ------------- Optional query parameter "exclude" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "exclude", r.URL.Query(), &params.Exclude)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "exclude", Err: err})
+		return
+	}
 
 	// ------------- Optional query parameter "role_name" -------------
 
 	err = runtime.BindQueryParameter("form", true, false, "role_name", r.URL.Query(), &params.RoleName)
 	if err != nil {
 		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "role_name", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "role_display_name" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "role_display_name", r.URL.Query(), &params.RoleDisplayName)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "role_display_name", Err: err})
 		return
 	}
 
@@ -906,27 +2620,11 @@ func (siw *ServerInterfaceWrapper) ListRolesForGroup(w http.ResponseWriter, r *h
 		return
 	}
 
-	// ------------- Optional query parameter "limit" -------------
+	// ------------- Optional query parameter "role_system" -------------
 
-	err = runtime.BindQueryParameter("form", true, false, "limit", r.URL.Query(), &params.Limit)
+	err = runtime.BindQueryParameter("form", true, false, "role_system", r.URL.Query(), &params.RoleSystem)
 	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
-		return
-	}
-
-	// ------------- Optional query parameter "offset" -------------
-
-	err = runtime.BindQueryParameter("form", true, false, "offset", r.URL.Query(), &params.Offset)
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "offset", Err: err})
-		return
-	}
-
-	// ------------- Optional query parameter "order_by" -------------
-
-	err = runtime.BindQueryParameter("form", true, false, "order_by", r.URL.Query(), &params.OrderBy)
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "order_by", Err: err})
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "role_system", Err: err})
 		return
 	}
 
@@ -938,52 +2636,6 @@ func (siw *ServerInterfaceWrapper) ListRolesForGroup(w http.ResponseWriter, r *h
 		return
 	}
 
-	// ------------- Optional query parameter "username" -------------
-
-	err = runtime.BindQueryParameter("form", true, false, "username", r.URL.Query(), &params.Username)
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "username", Err: err})
-		return
-	}
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ListRolesForGroup(w, r, orgId, uuid, params)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r.WithContext(ctx))
-}
-
-// ListGroupsForPrincipal operation middleware
-func (siw *ServerInterfaceWrapper) ListGroupsForPrincipal(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-
-	var err error
-
-	// ------------- Path parameter "orgId" -------------
-	var orgId string
-
-	err = runtime.BindStyledParameterWithLocation("simple", false, "orgId", runtime.ParamLocationPath, chi.URLParam(r, "orgId"), &orgId)
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "orgId", Err: err})
-		return
-	}
-
-	// ------------- Path parameter "username" -------------
-	var username string
-
-	err = runtime.BindStyledParameterWithLocation("simple", false, "username", runtime.ParamLocationPath, chi.URLParam(r, "username"), &username)
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "username", Err: err})
-		return
-	}
-
-	// Parameter object where we will unmarshal all parameters from the context
-	var params ListGroupsForPrincipalParams
-
 	// ------------- Optional query parameter "limit" -------------
 
 	err = runtime.BindQueryParameter("form", true, false, "limit", r.URL.Query(), &params.Limit)
@@ -1000,14 +2652,6 @@ func (siw *ServerInterfaceWrapper) ListGroupsForPrincipal(w http.ResponseWriter,
 		return
 	}
 
-	// ------------- Optional query parameter "uuid" -------------
-
-	err = runtime.BindQueryParameter("form", false, false, "uuid", r.URL.Query(), &params.Uuid)
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "uuid", Err: err})
-		return
-	}
-
 	// ------------- Optional query parameter "order_by" -------------
 
 	err = runtime.BindQueryParameter("form", true, false, "order_by", r.URL.Query(), &params.OrderBy)
@@ -1017,7 +2661,7 @@ func (siw *ServerInterfaceWrapper) ListGroupsForPrincipal(w http.ResponseWriter,
 	}
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ListGroupsForPrincipal(w, r, orgId, username, params)
+		siw.Handler.ListRolesForGroup(w, r, uuid, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1027,29 +2671,11 @@ func (siw *ServerInterfaceWrapper) ListGroupsForPrincipal(w http.ResponseWriter,
 	handler.ServeHTTP(w, r.WithContext(ctx))
 }
 
-// ListRolesForGroupsForPrincipal operation middleware
-func (siw *ServerInterfaceWrapper) ListRolesForGroupsForPrincipal(w http.ResponseWriter, r *http.Request) {
+// AddRoleToGroup operation middleware
+func (siw *ServerInterfaceWrapper) AddRoleToGroup(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	var err error
-
-	// ------------- Path parameter "orgId" -------------
-	var orgId string
-
-	err = runtime.BindStyledParameterWithLocation("simple", false, "orgId", runtime.ParamLocationPath, chi.URLParam(r, "orgId"), &orgId)
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "orgId", Err: err})
-		return
-	}
-
-	// ------------- Path parameter "username" -------------
-	var username string
-
-	err = runtime.BindStyledParameterWithLocation("simple", false, "username", runtime.ParamLocationPath, chi.URLParam(r, "username"), &username)
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "username", Err: err})
-		return
-	}
 
 	// ------------- Path parameter "uuid" -------------
 	var uuid openapi_types.UUID
@@ -1060,16 +2686,29 @@ func (siw *ServerInterfaceWrapper) ListRolesForGroupsForPrincipal(w http.Respons
 		return
 	}
 
-	// Parameter object where we will unmarshal all parameters from the context
-	var params ListRolesForGroupsForPrincipalParams
+	ctx = context.WithValue(ctx, Basic_authScopes, []string{})
 
-	// ------------- Optional query parameter "role_name" -------------
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AddRoleToGroup(w, r, uuid)
+	}))
 
-	err = runtime.BindQueryParameter("form", true, false, "role_name", r.URL.Query(), &params.RoleName)
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "role_name", Err: err})
-		return
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
 	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
+
+// ListPermissions operation middleware
+func (siw *ServerInterfaceWrapper) ListPermissions(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	var err error
+
+	ctx = context.WithValue(ctx, Basic_authScopes, []string{})
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListPermissionsParams
 
 	// ------------- Optional query parameter "limit" -------------
 
@@ -1095,8 +2734,64 @@ func (siw *ServerInterfaceWrapper) ListRolesForGroupsForPrincipal(w http.Respons
 		return
 	}
 
+	// ------------- Optional query parameter "application" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "application", r.URL.Query(), &params.Application)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "application", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "resource_type" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "resource_type", r.URL.Query(), &params.ResourceType)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "resource_type", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "verb" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "verb", r.URL.Query(), &params.Verb)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "verb", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "permission" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "permission", r.URL.Query(), &params.Permission)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "permission", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "exclude_globals" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "exclude_globals", r.URL.Query(), &params.ExcludeGlobals)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "exclude_globals", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "exclude_roles" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "exclude_roles", r.URL.Query(), &params.ExcludeRoles)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "exclude_roles", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "allowed_only" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "allowed_only", r.URL.Query(), &params.AllowedOnly)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "allowed_only", Err: err})
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ListRolesForGroupsForPrincipal(w, r, orgId, username, uuid, params)
+		siw.Handler.ListPermissions(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1106,23 +2801,125 @@ func (siw *ServerInterfaceWrapper) ListRolesForGroupsForPrincipal(w http.Respons
 	handler.ServeHTTP(w, r.WithContext(ctx))
 }
 
-// ListRole operation middleware
-func (siw *ServerInterfaceWrapper) ListRole(w http.ResponseWriter, r *http.Request) {
+// ListPermissionOptions operation middleware
+func (siw *ServerInterfaceWrapper) ListPermissionOptions(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	var err error
 
-	// ------------- Path parameter "orgId" -------------
-	var orgId string
+	ctx = context.WithValue(ctx, Basic_authScopes, []string{})
 
-	err = runtime.BindStyledParameterWithLocation("simple", false, "orgId", runtime.ParamLocationPath, chi.URLParam(r, "orgId"), &orgId)
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListPermissionOptionsParams
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "limit", r.URL.Query(), &params.Limit)
 	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "orgId", Err: err})
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
 		return
 	}
 
+	// ------------- Optional query parameter "offset" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "offset", r.URL.Query(), &params.Offset)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "offset", Err: err})
+		return
+	}
+
+	// ------------- Required query parameter "field" -------------
+
+	if paramValue := r.URL.Query().Get("field"); paramValue != "" {
+
+	} else {
+		siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "field"})
+		return
+	}
+
+	err = runtime.BindQueryParameter("form", true, true, "field", r.URL.Query(), &params.Field)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "field", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "application" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "application", r.URL.Query(), &params.Application)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "application", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "resource_type" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "resource_type", r.URL.Query(), &params.ResourceType)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "resource_type", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "verb" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "verb", r.URL.Query(), &params.Verb)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "verb", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "exclude_globals" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "exclude_globals", r.URL.Query(), &params.ExcludeGlobals)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "exclude_globals", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "allowed_only" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "allowed_only", r.URL.Query(), &params.AllowedOnly)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "allowed_only", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListPermissionOptions(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
+
+// ListPolicies operation middleware
+func (siw *ServerInterfaceWrapper) ListPolicies(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	var err error
+
+	ctx = context.WithValue(ctx, Basic_authScopes, []string{})
+
 	// Parameter object where we will unmarshal all parameters from the context
-	var params ListRoleParams
+	var params ListPoliciesParams
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "limit", r.URL.Query(), &params.Limit)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "offset" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "offset", r.URL.Query(), &params.Offset)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "offset", Err: err})
+		return
+	}
 
 	// ------------- Optional query parameter "name" -------------
 
@@ -1132,11 +2929,284 @@ func (siw *ServerInterfaceWrapper) ListRole(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	// ------------- Optional query parameter "display_name" -------------
+	// ------------- Optional query parameter "scope" -------------
 
-	err = runtime.BindQueryParameter("form", true, false, "display_name", r.URL.Query(), &params.DisplayName)
+	err = runtime.BindQueryParameter("form", true, false, "scope", r.URL.Query(), &params.Scope)
 	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "display_name", Err: err})
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "scope", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "group_name" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "group_name", r.URL.Query(), &params.GroupName)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "group_name", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "group_uuid" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "group_uuid", r.URL.Query(), &params.GroupUuid)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "group_uuid", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "order_by" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "order_by", r.URL.Query(), &params.OrderBy)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "order_by", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListPolicies(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
+
+// CreatePolicies operation middleware
+func (siw *ServerInterfaceWrapper) CreatePolicies(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, Basic_authScopes, []string{})
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreatePolicies(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
+
+// DeletePolicy operation middleware
+func (siw *ServerInterfaceWrapper) DeletePolicy(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	var err error
+
+	// ------------- Path parameter "uuid" -------------
+	var uuid openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithLocation("simple", false, "uuid", runtime.ParamLocationPath, chi.URLParam(r, "uuid"), &uuid)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "uuid", Err: err})
+		return
+	}
+
+	ctx = context.WithValue(ctx, Basic_authScopes, []string{})
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeletePolicy(w, r, uuid)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
+
+// GetPolicy operation middleware
+func (siw *ServerInterfaceWrapper) GetPolicy(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	var err error
+
+	// ------------- Path parameter "uuid" -------------
+	var uuid openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithLocation("simple", false, "uuid", runtime.ParamLocationPath, chi.URLParam(r, "uuid"), &uuid)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "uuid", Err: err})
+		return
+	}
+
+	ctx = context.WithValue(ctx, Basic_authScopes, []string{})
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetPolicy(w, r, uuid)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
+
+// UpdatePolicy operation middleware
+func (siw *ServerInterfaceWrapper) UpdatePolicy(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	var err error
+
+	// ------------- Path parameter "uuid" -------------
+	var uuid openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithLocation("simple", false, "uuid", runtime.ParamLocationPath, chi.URLParam(r, "uuid"), &uuid)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "uuid", Err: err})
+		return
+	}
+
+	ctx = context.WithValue(ctx, Basic_authScopes, []string{})
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdatePolicy(w, r, uuid)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
+
+// ListPrincipals operation middleware
+func (siw *ServerInterfaceWrapper) ListPrincipals(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	var err error
+
+	ctx = context.WithValue(ctx, Basic_authScopes, []string{})
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListPrincipalsParams
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "limit", r.URL.Query(), &params.Limit)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "offset" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "offset", r.URL.Query(), &params.Offset)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "offset", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "match_criteria" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "match_criteria", r.URL.Query(), &params.MatchCriteria)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "match_criteria", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "usernames" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "usernames", r.URL.Query(), &params.Usernames)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "usernames", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "sort_order" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "sort_order", r.URL.Query(), &params.SortOrder)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "sort_order", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "email" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "email", r.URL.Query(), &params.Email)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "email", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "status" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "status", r.URL.Query(), &params.Status)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "status", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "admin_only" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "admin_only", r.URL.Query(), &params.AdminOnly)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "admin_only", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "order_by" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "order_by", r.URL.Query(), &params.OrderBy)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "order_by", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "username_only" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "username_only", r.URL.Query(), &params.UsernameOnly)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "username_only", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListPrincipals(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
+
+// ListRoles operation middleware
+func (siw *ServerInterfaceWrapper) ListRoles(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	var err error
+
+	ctx = context.WithValue(ctx, Basic_authScopes, []string{})
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListRolesParams
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "limit", r.URL.Query(), &params.Limit)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "offset" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "offset", r.URL.Query(), &params.Offset)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "offset", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "name" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "name", r.URL.Query(), &params.Name)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "name", Err: err})
 		return
 	}
 
@@ -1145,6 +3215,14 @@ func (siw *ServerInterfaceWrapper) ListRole(w http.ResponseWriter, r *http.Reque
 	err = runtime.BindQueryParameter("form", true, false, "system", r.URL.Query(), &params.System)
 	if err != nil {
 		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "system", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "display_name" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "display_name", r.URL.Query(), &params.DisplayName)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "display_name", Err: err})
 		return
 	}
 
@@ -1164,22 +3242,6 @@ func (siw *ServerInterfaceWrapper) ListRole(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	// ------------- Optional query parameter "limit" -------------
-
-	err = runtime.BindQueryParameter("form", true, false, "limit", r.URL.Query(), &params.Limit)
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
-		return
-	}
-
-	// ------------- Optional query parameter "offset" -------------
-
-	err = runtime.BindQueryParameter("form", true, false, "offset", r.URL.Query(), &params.Offset)
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "offset", Err: err})
-		return
-	}
-
 	// ------------- Optional query parameter "order_by" -------------
 
 	err = runtime.BindQueryParameter("form", true, false, "order_by", r.URL.Query(), &params.OrderBy)
@@ -1190,7 +3252,7 @@ func (siw *ServerInterfaceWrapper) ListRole(w http.ResponseWriter, r *http.Reque
 
 	// ------------- Optional query parameter "add_fields" -------------
 
-	err = runtime.BindQueryParameter("form", true, false, "add_fields", r.URL.Query(), &params.AddFields)
+	err = runtime.BindQueryParameter("form", false, false, "add_fields", r.URL.Query(), &params.AddFields)
 	if err != nil {
 		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "add_fields", Err: err})
 		return
@@ -1229,7 +3291,211 @@ func (siw *ServerInterfaceWrapper) ListRole(w http.ResponseWriter, r *http.Reque
 	}
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ListRole(w, r, orgId, params)
+		siw.Handler.ListRoles(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
+
+// CreateRole operation middleware
+func (siw *ServerInterfaceWrapper) CreateRole(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, Basic_authScopes, []string{})
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateRole(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
+
+// DeleteRole operation middleware
+func (siw *ServerInterfaceWrapper) DeleteRole(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	var err error
+
+	// ------------- Path parameter "uuid" -------------
+	var uuid openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithLocation("simple", false, "uuid", runtime.ParamLocationPath, chi.URLParam(r, "uuid"), &uuid)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "uuid", Err: err})
+		return
+	}
+
+	ctx = context.WithValue(ctx, Basic_authScopes, []string{})
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteRole(w, r, uuid)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
+
+// GetRole operation middleware
+func (siw *ServerInterfaceWrapper) GetRole(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	var err error
+
+	// ------------- Path parameter "uuid" -------------
+	var uuid openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithLocation("simple", false, "uuid", runtime.ParamLocationPath, chi.URLParam(r, "uuid"), &uuid)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "uuid", Err: err})
+		return
+	}
+
+	ctx = context.WithValue(ctx, Basic_authScopes, []string{})
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetRoleParams
+
+	// ------------- Optional query parameter "scope" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "scope", r.URL.Query(), &params.Scope)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "scope", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetRole(w, r, uuid, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
+
+// PatchRole operation middleware
+func (siw *ServerInterfaceWrapper) PatchRole(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	var err error
+
+	// ------------- Path parameter "uuid" -------------
+	var uuid openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithLocation("simple", false, "uuid", runtime.ParamLocationPath, chi.URLParam(r, "uuid"), &uuid)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "uuid", Err: err})
+		return
+	}
+
+	ctx = context.WithValue(ctx, Basic_authScopes, []string{})
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PatchRole(w, r, uuid)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
+
+// UpdateRole operation middleware
+func (siw *ServerInterfaceWrapper) UpdateRole(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	var err error
+
+	// ------------- Path parameter "uuid" -------------
+	var uuid openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithLocation("simple", false, "uuid", runtime.ParamLocationPath, chi.URLParam(r, "uuid"), &uuid)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "uuid", Err: err})
+		return
+	}
+
+	ctx = context.WithValue(ctx, Basic_authScopes, []string{})
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateRole(w, r, uuid)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
+
+// GetRoleAccess operation middleware
+func (siw *ServerInterfaceWrapper) GetRoleAccess(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	var err error
+
+	// ------------- Path parameter "uuid" -------------
+	var uuid openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithLocation("simple", false, "uuid", runtime.ParamLocationPath, chi.URLParam(r, "uuid"), &uuid)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "uuid", Err: err})
+		return
+	}
+
+	ctx = context.WithValue(ctx, Basic_authScopes, []string{})
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetRoleAccessParams
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "limit", r.URL.Query(), &params.Limit)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "offset" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "offset", r.URL.Query(), &params.Offset)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "offset", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetRoleAccess(w, r, uuid, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
+
+// GetStatus operation middleware
+func (siw *ServerInterfaceWrapper) GetStatus(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, Basic_authScopes, []string{})
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetStatus(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1353,130 +3619,408 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	}
 
 	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/api/utils/get_org_admin/{org_or_account}/", wrapper.ListOrgAdmins)
+		r.Get(options.BaseURL+"/access/", wrapper.GetPrincipalAccess)
 	})
 	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/integrations/tenant/", wrapper.ListTenants)
+		r.Get(options.BaseURL+"/cross-account-requests/", wrapper.ListCrossAccountRequests)
 	})
 	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/integrations/tenant/{orgId}/groups/", wrapper.ListGroups)
+		r.Post(options.BaseURL+"/cross-account-requests/", wrapper.CreateCrossAccountRequests)
 	})
 	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/integrations/tenant/{orgId}/groups/{uuid}/principals/", wrapper.ListPrincipalsForGroup)
+		r.Get(options.BaseURL+"/cross-account-requests/{uuid}/", wrapper.GetCrossAccountRequest)
 	})
 	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/integrations/tenant/{orgId}/groups/{uuid}/roles/", wrapper.ListRolesForGroup)
+		r.Patch(options.BaseURL+"/cross-account-requests/{uuid}/", wrapper.PatchCrossAccountRequest)
 	})
 	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/integrations/tenant/{orgId}/principal/{username}/groups/", wrapper.ListGroupsForPrincipal)
+		r.Put(options.BaseURL+"/cross-account-requests/{uuid}/", wrapper.PutCrossAccountRequest)
 	})
 	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/integrations/tenant/{orgId}/principal/{username}/groups/{uuid}/roles/", wrapper.ListRolesForGroupsForPrincipal)
+		r.Get(options.BaseURL+"/groups/", wrapper.ListGroups)
 	})
 	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/integrations/tenant/{orgId}/roles/", wrapper.ListRole)
+		r.Post(options.BaseURL+"/groups/", wrapper.CreateGroup)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/groups/{uuid}/", wrapper.DeleteGroup)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/groups/{uuid}/", wrapper.GetGroup)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/groups/{uuid}/", wrapper.UpdateGroup)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/groups/{uuid}/principals/", wrapper.DeletePrincipalFromGroup)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/groups/{uuid}/principals/", wrapper.GetPrincipalsFromGroup)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/groups/{uuid}/principals/", wrapper.AddPrincipalToGroup)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/groups/{uuid}/roles/", wrapper.DeleteRoleFromGroup)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/groups/{uuid}/roles/", wrapper.ListRolesForGroup)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/groups/{uuid}/roles/", wrapper.AddRoleToGroup)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/permissions/", wrapper.ListPermissions)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/permissions/options/", wrapper.ListPermissionOptions)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/policies/", wrapper.ListPolicies)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/policies/", wrapper.CreatePolicies)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/policies/{uuid}/", wrapper.DeletePolicy)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/policies/{uuid}/", wrapper.GetPolicy)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/policies/{uuid}/", wrapper.UpdatePolicy)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/principals/", wrapper.ListPrincipals)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/roles/", wrapper.ListRoles)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/roles/", wrapper.CreateRole)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/roles/{uuid}/", wrapper.DeleteRole)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/roles/{uuid}/", wrapper.GetRole)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/roles/{uuid}/", wrapper.PatchRole)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/roles/{uuid}/", wrapper.UpdateRole)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/roles/{uuid}/access/", wrapper.GetRoleAccess)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/status/", wrapper.GetStatus)
 	})
 
 	return r
 }
 
-type ListOrgAdminsRequestObject struct {
-	OrgOrAccount string `json:"org_or_account"`
-	Params       ListOrgAdminsParams
+type GetPrincipalAccessRequestObject struct {
+	Params GetPrincipalAccessParams
 }
 
-type ListOrgAdminsResponseObject interface {
-	VisitListOrgAdminsResponse(w http.ResponseWriter) error
+type GetPrincipalAccessResponseObject interface {
+	VisitGetPrincipalAccessResponse(w http.ResponseWriter) error
 }
 
-type ListOrgAdmins200JSONResponse OrgAdminPagination
+type GetPrincipalAccess200JSONResponse AccessPagination
 
-func (response ListOrgAdmins200JSONResponse) VisitListOrgAdminsResponse(w http.ResponseWriter) error {
+func (response GetPrincipalAccess200JSONResponse) VisitGetPrincipalAccessResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(200)
 
 	return json.NewEncoder(w).Encode(response)
 }
 
-type ListOrgAdmins400Response struct {
+type GetPrincipalAccess401Response struct {
 }
 
-func (response ListOrgAdmins400Response) VisitListOrgAdminsResponse(w http.ResponseWriter) error {
-	w.WriteHeader(400)
-	return nil
-}
-
-type ListOrgAdmins401Response struct {
-}
-
-func (response ListOrgAdmins401Response) VisitListOrgAdminsResponse(w http.ResponseWriter) error {
+func (response GetPrincipalAccess401Response) VisitGetPrincipalAccessResponse(w http.ResponseWriter) error {
 	w.WriteHeader(401)
 	return nil
 }
 
-type ListOrgAdmins404JSONResponse Error
+type GetPrincipalAccess404JSONResponse Error
 
-func (response ListOrgAdmins404JSONResponse) VisitListOrgAdminsResponse(w http.ResponseWriter) error {
+func (response GetPrincipalAccess404JSONResponse) VisitGetPrincipalAccessResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(404)
 
 	return json.NewEncoder(w).Encode(response)
 }
 
-type ListOrgAdmins500JSONResponse Error
+type GetPrincipalAccess500JSONResponse Error
 
-func (response ListOrgAdmins500JSONResponse) VisitListOrgAdminsResponse(w http.ResponseWriter) error {
+func (response GetPrincipalAccess500JSONResponse) VisitGetPrincipalAccessResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(500)
 
 	return json.NewEncoder(w).Encode(response)
 }
 
-type ListTenantsRequestObject struct {
-	Params ListTenantsParams
+type ListCrossAccountRequestsRequestObject struct {
+	Params ListCrossAccountRequestsParams
 }
 
-type ListTenantsResponseObject interface {
-	VisitListTenantsResponse(w http.ResponseWriter) error
+type ListCrossAccountRequestsResponseObject interface {
+	VisitListCrossAccountRequestsResponse(w http.ResponseWriter) error
 }
 
-type ListTenants200JSONResponse TenantPagination
+type ListCrossAccountRequests200JSONResponse CrossAccountRequestPagination
 
-func (response ListTenants200JSONResponse) VisitListTenantsResponse(w http.ResponseWriter) error {
+func (response ListCrossAccountRequests200JSONResponse) VisitListCrossAccountRequestsResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(200)
 
 	return json.NewEncoder(w).Encode(response)
 }
 
-type ListTenants400Response struct {
+type ListCrossAccountRequests401Response struct {
 }
 
-func (response ListTenants400Response) VisitListTenantsResponse(w http.ResponseWriter) error {
-	w.WriteHeader(400)
-	return nil
-}
-
-type ListTenants401Response struct {
-}
-
-func (response ListTenants401Response) VisitListTenantsResponse(w http.ResponseWriter) error {
+func (response ListCrossAccountRequests401Response) VisitListCrossAccountRequestsResponse(w http.ResponseWriter) error {
 	w.WriteHeader(401)
 	return nil
 }
 
-type ListTenants404JSONResponse Error
+type ListCrossAccountRequests403JSONResponse Error403
 
-func (response ListTenants404JSONResponse) VisitListTenantsResponse(w http.ResponseWriter) error {
+func (response ListCrossAccountRequests403JSONResponse) VisitListCrossAccountRequestsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListCrossAccountRequests500JSONResponse Error
+
+func (response ListCrossAccountRequests500JSONResponse) VisitListCrossAccountRequestsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateCrossAccountRequestsRequestObject struct {
+	Body *CreateCrossAccountRequestsJSONRequestBody
+}
+
+type CreateCrossAccountRequestsResponseObject interface {
+	VisitCreateCrossAccountRequestsResponse(w http.ResponseWriter) error
+}
+
+type CreateCrossAccountRequests201JSONResponse CrossAccountRequestOut
+
+func (response CreateCrossAccountRequests201JSONResponse) VisitCreateCrossAccountRequestsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateCrossAccountRequests401Response struct {
+}
+
+func (response CreateCrossAccountRequests401Response) VisitCreateCrossAccountRequestsResponse(w http.ResponseWriter) error {
+	w.WriteHeader(401)
+	return nil
+}
+
+type CreateCrossAccountRequests403JSONResponse Error403
+
+func (response CreateCrossAccountRequests403JSONResponse) VisitCreateCrossAccountRequestsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateCrossAccountRequests500JSONResponse Error
+
+func (response CreateCrossAccountRequests500JSONResponse) VisitCreateCrossAccountRequestsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetCrossAccountRequestRequestObject struct {
+	Uuid   openapi_types.UUID `json:"uuid"`
+	Params GetCrossAccountRequestParams
+}
+
+type GetCrossAccountRequestResponseObject interface {
+	VisitGetCrossAccountRequestResponse(w http.ResponseWriter) error
+}
+
+type GetCrossAccountRequest200JSONResponse CrossAccountRequestDetail
+
+func (response GetCrossAccountRequest200JSONResponse) VisitGetCrossAccountRequestResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetCrossAccountRequest401Response struct {
+}
+
+func (response GetCrossAccountRequest401Response) VisitGetCrossAccountRequestResponse(w http.ResponseWriter) error {
+	w.WriteHeader(401)
+	return nil
+}
+
+type GetCrossAccountRequest403JSONResponse Error403
+
+func (response GetCrossAccountRequest403JSONResponse) VisitGetCrossAccountRequestResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetCrossAccountRequest404JSONResponse Error
+
+func (response GetCrossAccountRequest404JSONResponse) VisitGetCrossAccountRequestResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(404)
 
 	return json.NewEncoder(w).Encode(response)
 }
 
-type ListTenants500JSONResponse Error
+type GetCrossAccountRequest500JSONResponse Error
 
-func (response ListTenants500JSONResponse) VisitListTenantsResponse(w http.ResponseWriter) error {
+func (response GetCrossAccountRequest500JSONResponse) VisitGetCrossAccountRequestResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PatchCrossAccountRequestRequestObject struct {
+	Uuid openapi_types.UUID `json:"uuid"`
+	Body *PatchCrossAccountRequestJSONRequestBody
+}
+
+type PatchCrossAccountRequestResponseObject interface {
+	VisitPatchCrossAccountRequestResponse(w http.ResponseWriter) error
+}
+
+type PatchCrossAccountRequest200JSONResponse CrossAccountRequestDetail
+
+func (response PatchCrossAccountRequest200JSONResponse) VisitPatchCrossAccountRequestResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PatchCrossAccountRequest201JSONResponse CrossAccountRequestOut
+
+func (response PatchCrossAccountRequest201JSONResponse) VisitPatchCrossAccountRequestResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PatchCrossAccountRequest401Response struct {
+}
+
+func (response PatchCrossAccountRequest401Response) VisitPatchCrossAccountRequestResponse(w http.ResponseWriter) error {
+	w.WriteHeader(401)
+	return nil
+}
+
+type PatchCrossAccountRequest403JSONResponse Error403
+
+func (response PatchCrossAccountRequest403JSONResponse) VisitPatchCrossAccountRequestResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PatchCrossAccountRequest404JSONResponse Error
+
+func (response PatchCrossAccountRequest404JSONResponse) VisitPatchCrossAccountRequestResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PatchCrossAccountRequest500JSONResponse Error
+
+func (response PatchCrossAccountRequest500JSONResponse) VisitPatchCrossAccountRequestResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PutCrossAccountRequestRequestObject struct {
+	Uuid openapi_types.UUID `json:"uuid"`
+	Body *PutCrossAccountRequestJSONRequestBody
+}
+
+type PutCrossAccountRequestResponseObject interface {
+	VisitPutCrossAccountRequestResponse(w http.ResponseWriter) error
+}
+
+type PutCrossAccountRequest200JSONResponse CrossAccountRequestDetail
+
+func (response PutCrossAccountRequest200JSONResponse) VisitPutCrossAccountRequestResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PutCrossAccountRequest201JSONResponse CrossAccountRequestOut
+
+func (response PutCrossAccountRequest201JSONResponse) VisitPutCrossAccountRequestResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PutCrossAccountRequest401Response struct {
+}
+
+func (response PutCrossAccountRequest401Response) VisitPutCrossAccountRequestResponse(w http.ResponseWriter) error {
+	w.WriteHeader(401)
+	return nil
+}
+
+type PutCrossAccountRequest403JSONResponse Error403
+
+func (response PutCrossAccountRequest403JSONResponse) VisitPutCrossAccountRequestResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PutCrossAccountRequest404JSONResponse Error
+
+func (response PutCrossAccountRequest404JSONResponse) VisitPutCrossAccountRequestResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PutCrossAccountRequest500JSONResponse Error
+
+func (response PutCrossAccountRequest500JSONResponse) VisitPutCrossAccountRequestResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(500)
 
@@ -1484,7 +4028,6 @@ func (response ListTenants500JSONResponse) VisitListTenantsResponse(w http.Respo
 }
 
 type ListGroupsRequestObject struct {
-	OrgId  string `json:"orgId"`
 	Params ListGroupsParams
 }
 
@@ -1527,53 +4070,476 @@ func (response ListGroups500JSONResponse) VisitListGroupsResponse(w http.Respons
 	return json.NewEncoder(w).Encode(response)
 }
 
-type ListPrincipalsForGroupRequestObject struct {
-	OrgId  string             `json:"orgId"`
-	Uuid   openapi_types.UUID `json:"uuid"`
-	Params ListPrincipalsForGroupParams
+type CreateGroupRequestObject struct {
+	Body *CreateGroupJSONRequestBody
 }
 
-type ListPrincipalsForGroupResponseObject interface {
-	VisitListPrincipalsForGroupResponse(w http.ResponseWriter) error
+type CreateGroupResponseObject interface {
+	VisitCreateGroupResponse(w http.ResponseWriter) error
 }
 
-type ListPrincipalsForGroup200JSONResponse PrincipalPagination
+type CreateGroup201JSONResponse GroupOut
 
-func (response ListPrincipalsForGroup200JSONResponse) VisitListPrincipalsForGroupResponse(w http.ResponseWriter) error {
+func (response CreateGroup201JSONResponse) VisitCreateGroupResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateGroup401Response struct {
+}
+
+func (response CreateGroup401Response) VisitCreateGroupResponse(w http.ResponseWriter) error {
+	w.WriteHeader(401)
+	return nil
+}
+
+type CreateGroup403JSONResponse Error403
+
+func (response CreateGroup403JSONResponse) VisitCreateGroupResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateGroup500JSONResponse Error
+
+func (response CreateGroup500JSONResponse) VisitCreateGroupResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeleteGroupRequestObject struct {
+	Uuid openapi_types.UUID `json:"uuid"`
+}
+
+type DeleteGroupResponseObject interface {
+	VisitDeleteGroupResponse(w http.ResponseWriter) error
+}
+
+type DeleteGroup204Response struct {
+}
+
+func (response DeleteGroup204Response) VisitDeleteGroupResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteGroup401Response struct {
+}
+
+func (response DeleteGroup401Response) VisitDeleteGroupResponse(w http.ResponseWriter) error {
+	w.WriteHeader(401)
+	return nil
+}
+
+type DeleteGroup403JSONResponse Error403
+
+func (response DeleteGroup403JSONResponse) VisitDeleteGroupResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeleteGroup404AsteriskResponse struct {
+	Body          io.Reader
+	ContentType   string
+	ContentLength int64
+}
+
+func (response DeleteGroup404AsteriskResponse) VisitDeleteGroupResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", response.ContentType)
+	if response.ContentLength != 0 {
+		w.Header().Set("Content-Length", fmt.Sprint(response.ContentLength))
+	}
+	w.WriteHeader(404)
+
+	if closer, ok := response.Body.(io.ReadCloser); ok {
+		defer closer.Close()
+	}
+	_, err := io.Copy(w, response.Body)
+	return err
+}
+
+type DeleteGroup500AsteriskResponse struct {
+	Body          io.Reader
+	ContentType   string
+	ContentLength int64
+}
+
+func (response DeleteGroup500AsteriskResponse) VisitDeleteGroupResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", response.ContentType)
+	if response.ContentLength != 0 {
+		w.Header().Set("Content-Length", fmt.Sprint(response.ContentLength))
+	}
+	w.WriteHeader(500)
+
+	if closer, ok := response.Body.(io.ReadCloser); ok {
+		defer closer.Close()
+	}
+	_, err := io.Copy(w, response.Body)
+	return err
+}
+
+type GetGroupRequestObject struct {
+	Uuid openapi_types.UUID `json:"uuid"`
+}
+
+type GetGroupResponseObject interface {
+	VisitGetGroupResponse(w http.ResponseWriter) error
+}
+
+type GetGroup200JSONResponse GroupWithPrincipalsAndRoles
+
+func (response GetGroup200JSONResponse) VisitGetGroupResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(200)
 
 	return json.NewEncoder(w).Encode(response)
 }
 
-type ListPrincipalsForGroup400Response struct {
+type GetGroup401Response struct {
 }
 
-func (response ListPrincipalsForGroup400Response) VisitListPrincipalsForGroupResponse(w http.ResponseWriter) error {
-	w.WriteHeader(400)
-	return nil
-}
-
-type ListPrincipalsForGroup401Response struct {
-}
-
-func (response ListPrincipalsForGroup401Response) VisitListPrincipalsForGroupResponse(w http.ResponseWriter) error {
+func (response GetGroup401Response) VisitGetGroupResponse(w http.ResponseWriter) error {
 	w.WriteHeader(401)
 	return nil
 }
 
-type ListPrincipalsForGroup404JSONResponse Error
+type GetGroup403JSONResponse Error403
 
-func (response ListPrincipalsForGroup404JSONResponse) VisitListPrincipalsForGroupResponse(w http.ResponseWriter) error {
+func (response GetGroup403JSONResponse) VisitGetGroupResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetGroup404JSONResponse Error
+
+func (response GetGroup404JSONResponse) VisitGetGroupResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(404)
 
 	return json.NewEncoder(w).Encode(response)
 }
 
-type ListPrincipalsForGroup500JSONResponse Error
+type GetGroup500JSONResponse Error
 
-func (response ListPrincipalsForGroup500JSONResponse) VisitListPrincipalsForGroupResponse(w http.ResponseWriter) error {
+func (response GetGroup500JSONResponse) VisitGetGroupResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateGroupRequestObject struct {
+	Uuid openapi_types.UUID `json:"uuid"`
+	Body *UpdateGroupJSONRequestBody
+}
+
+type UpdateGroupResponseObject interface {
+	VisitUpdateGroupResponse(w http.ResponseWriter) error
+}
+
+type UpdateGroup200JSONResponse GroupOut
+
+func (response UpdateGroup200JSONResponse) VisitUpdateGroupResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateGroup401Response struct {
+}
+
+func (response UpdateGroup401Response) VisitUpdateGroupResponse(w http.ResponseWriter) error {
+	w.WriteHeader(401)
+	return nil
+}
+
+type UpdateGroup403JSONResponse Error403
+
+func (response UpdateGroup403JSONResponse) VisitUpdateGroupResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateGroup404AsteriskResponse struct {
+	Body          io.Reader
+	ContentType   string
+	ContentLength int64
+}
+
+func (response UpdateGroup404AsteriskResponse) VisitUpdateGroupResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", response.ContentType)
+	if response.ContentLength != 0 {
+		w.Header().Set("Content-Length", fmt.Sprint(response.ContentLength))
+	}
+	w.WriteHeader(404)
+
+	if closer, ok := response.Body.(io.ReadCloser); ok {
+		defer closer.Close()
+	}
+	_, err := io.Copy(w, response.Body)
+	return err
+}
+
+type UpdateGroup500AsteriskResponse struct {
+	Body          io.Reader
+	ContentType   string
+	ContentLength int64
+}
+
+func (response UpdateGroup500AsteriskResponse) VisitUpdateGroupResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", response.ContentType)
+	if response.ContentLength != 0 {
+		w.Header().Set("Content-Length", fmt.Sprint(response.ContentLength))
+	}
+	w.WriteHeader(500)
+
+	if closer, ok := response.Body.(io.ReadCloser); ok {
+		defer closer.Close()
+	}
+	_, err := io.Copy(w, response.Body)
+	return err
+}
+
+type DeletePrincipalFromGroupRequestObject struct {
+	Uuid   openapi_types.UUID `json:"uuid"`
+	Params DeletePrincipalFromGroupParams
+}
+
+type DeletePrincipalFromGroupResponseObject interface {
+	VisitDeletePrincipalFromGroupResponse(w http.ResponseWriter) error
+}
+
+type DeletePrincipalFromGroup204Response struct {
+}
+
+func (response DeletePrincipalFromGroup204Response) VisitDeletePrincipalFromGroupResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeletePrincipalFromGroup400Response struct {
+}
+
+func (response DeletePrincipalFromGroup400Response) VisitDeletePrincipalFromGroupResponse(w http.ResponseWriter) error {
+	w.WriteHeader(400)
+	return nil
+}
+
+type DeletePrincipalFromGroup401Response struct {
+}
+
+func (response DeletePrincipalFromGroup401Response) VisitDeletePrincipalFromGroupResponse(w http.ResponseWriter) error {
+	w.WriteHeader(401)
+	return nil
+}
+
+type DeletePrincipalFromGroup403JSONResponse Error403
+
+func (response DeletePrincipalFromGroup403JSONResponse) VisitDeletePrincipalFromGroupResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeletePrincipalFromGroup404JSONResponse ErrorNotFound
+
+func (response DeletePrincipalFromGroup404JSONResponse) VisitDeletePrincipalFromGroupResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeletePrincipalFromGroup500JSONResponse Error
+
+func (response DeletePrincipalFromGroup500JSONResponse) VisitDeletePrincipalFromGroupResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetPrincipalsFromGroupRequestObject struct {
+	Uuid   openapi_types.UUID `json:"uuid"`
+	Params GetPrincipalsFromGroupParams
+}
+
+type GetPrincipalsFromGroupResponseObject interface {
+	VisitGetPrincipalsFromGroupResponse(w http.ResponseWriter) error
+}
+
+type GetPrincipalsFromGroup200JSONResponse PrincipalPagination
+
+func (response GetPrincipalsFromGroup200JSONResponse) VisitGetPrincipalsFromGroupResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetPrincipalsFromGroup400Response struct {
+}
+
+func (response GetPrincipalsFromGroup400Response) VisitGetPrincipalsFromGroupResponse(w http.ResponseWriter) error {
+	w.WriteHeader(400)
+	return nil
+}
+
+type GetPrincipalsFromGroup401Response struct {
+}
+
+func (response GetPrincipalsFromGroup401Response) VisitGetPrincipalsFromGroupResponse(w http.ResponseWriter) error {
+	w.WriteHeader(401)
+	return nil
+}
+
+type GetPrincipalsFromGroup404JSONResponse Error
+
+func (response GetPrincipalsFromGroup404JSONResponse) VisitGetPrincipalsFromGroupResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetPrincipalsFromGroup500JSONResponse Error
+
+func (response GetPrincipalsFromGroup500JSONResponse) VisitGetPrincipalsFromGroupResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type AddPrincipalToGroupRequestObject struct {
+	Uuid openapi_types.UUID `json:"uuid"`
+	Body *AddPrincipalToGroupJSONRequestBody
+}
+
+type AddPrincipalToGroupResponseObject interface {
+	VisitAddPrincipalToGroupResponse(w http.ResponseWriter) error
+}
+
+type AddPrincipalToGroup200JSONResponse GroupWithPrincipalsAndRoles
+
+func (response AddPrincipalToGroup200JSONResponse) VisitAddPrincipalToGroupResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type AddPrincipalToGroup400Response struct {
+}
+
+func (response AddPrincipalToGroup400Response) VisitAddPrincipalToGroupResponse(w http.ResponseWriter) error {
+	w.WriteHeader(400)
+	return nil
+}
+
+type AddPrincipalToGroup401Response struct {
+}
+
+func (response AddPrincipalToGroup401Response) VisitAddPrincipalToGroupResponse(w http.ResponseWriter) error {
+	w.WriteHeader(401)
+	return nil
+}
+
+type AddPrincipalToGroup403JSONResponse Error403
+
+func (response AddPrincipalToGroup403JSONResponse) VisitAddPrincipalToGroupResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type AddPrincipalToGroup404JSONResponse ErrorNotFound
+
+func (response AddPrincipalToGroup404JSONResponse) VisitAddPrincipalToGroupResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type AddPrincipalToGroup500JSONResponse Error
+
+func (response AddPrincipalToGroup500JSONResponse) VisitAddPrincipalToGroupResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeleteRoleFromGroupRequestObject struct {
+	Uuid   openapi_types.UUID `json:"uuid"`
+	Params DeleteRoleFromGroupParams
+}
+
+type DeleteRoleFromGroupResponseObject interface {
+	VisitDeleteRoleFromGroupResponse(w http.ResponseWriter) error
+}
+
+type DeleteRoleFromGroup204Response struct {
+}
+
+func (response DeleteRoleFromGroup204Response) VisitDeleteRoleFromGroupResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteRoleFromGroup400Response struct {
+}
+
+func (response DeleteRoleFromGroup400Response) VisitDeleteRoleFromGroupResponse(w http.ResponseWriter) error {
+	w.WriteHeader(400)
+	return nil
+}
+
+type DeleteRoleFromGroup401Response struct {
+}
+
+func (response DeleteRoleFromGroup401Response) VisitDeleteRoleFromGroupResponse(w http.ResponseWriter) error {
+	w.WriteHeader(401)
+	return nil
+}
+
+type DeleteRoleFromGroup403JSONResponse Error403
+
+func (response DeleteRoleFromGroup403JSONResponse) VisitDeleteRoleFromGroupResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeleteRoleFromGroup404JSONResponse Error
+
+func (response DeleteRoleFromGroup404JSONResponse) VisitDeleteRoleFromGroupResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeleteRoleFromGroup500JSONResponse Error
+
+func (response DeleteRoleFromGroup500JSONResponse) VisitDeleteRoleFromGroupResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(500)
 
@@ -1581,7 +4547,6 @@ func (response ListPrincipalsForGroup500JSONResponse) VisitListPrincipalsForGrou
 }
 
 type ListRolesForGroupRequestObject struct {
-	OrgId  string             `json:"orgId"`
 	Uuid   openapi_types.UUID `json:"uuid"`
 	Params ListRolesForGroupParams
 }
@@ -1590,7 +4555,7 @@ type ListRolesForGroupResponseObject interface {
 	VisitListRolesForGroupResponse(w http.ResponseWriter) error
 }
 
-type ListRolesForGroup200JSONResponse RolePagination
+type ListRolesForGroup200JSONResponse GroupRolesPagination
 
 func (response ListRolesForGroup200JSONResponse) VisitListRolesForGroupResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
@@ -1625,135 +4590,762 @@ func (response ListRolesForGroup500JSONResponse) VisitListRolesForGroupResponse(
 	return json.NewEncoder(w).Encode(response)
 }
 
-type ListGroupsForPrincipalRequestObject struct {
-	OrgId    string `json:"orgId"`
-	Username string `json:"username"`
-	Params   ListGroupsForPrincipalParams
+type AddRoleToGroupRequestObject struct {
+	Uuid openapi_types.UUID `json:"uuid"`
+	Body *AddRoleToGroupJSONRequestBody
 }
 
-type ListGroupsForPrincipalResponseObject interface {
-	VisitListGroupsForPrincipalResponse(w http.ResponseWriter) error
+type AddRoleToGroupResponseObject interface {
+	VisitAddRoleToGroupResponse(w http.ResponseWriter) error
 }
 
-type ListGroupsForPrincipal200JSONResponse GroupPagination
+type AddRoleToGroup200JSONResponse struct {
+	Data []RoleOut `json:"data"`
+}
 
-func (response ListGroupsForPrincipal200JSONResponse) VisitListGroupsForPrincipalResponse(w http.ResponseWriter) error {
+func (response AddRoleToGroup200JSONResponse) VisitAddRoleToGroupResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(200)
 
 	return json.NewEncoder(w).Encode(response)
 }
 
-type ListGroupsForPrincipal401Response struct {
+type AddRoleToGroup400Response struct {
 }
 
-func (response ListGroupsForPrincipal401Response) VisitListGroupsForPrincipalResponse(w http.ResponseWriter) error {
+func (response AddRoleToGroup400Response) VisitAddRoleToGroupResponse(w http.ResponseWriter) error {
+	w.WriteHeader(400)
+	return nil
+}
+
+type AddRoleToGroup401Response struct {
+}
+
+func (response AddRoleToGroup401Response) VisitAddRoleToGroupResponse(w http.ResponseWriter) error {
 	w.WriteHeader(401)
 	return nil
 }
 
-type ListGroupsForPrincipal403JSONResponse Error403
+type AddRoleToGroup403JSONResponse Error403
 
-func (response ListGroupsForPrincipal403JSONResponse) VisitListGroupsForPrincipalResponse(w http.ResponseWriter) error {
+func (response AddRoleToGroup403JSONResponse) VisitAddRoleToGroupResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(403)
 
 	return json.NewEncoder(w).Encode(response)
 }
 
-type ListGroupsForPrincipal500JSONResponse Error
+type AddRoleToGroup404JSONResponse Error
 
-func (response ListGroupsForPrincipal500JSONResponse) VisitListGroupsForPrincipalResponse(w http.ResponseWriter) error {
+func (response AddRoleToGroup404JSONResponse) VisitAddRoleToGroupResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type AddRoleToGroup500JSONResponse Error
+
+func (response AddRoleToGroup500JSONResponse) VisitAddRoleToGroupResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(500)
 
 	return json.NewEncoder(w).Encode(response)
 }
 
-type ListRolesForGroupsForPrincipalRequestObject struct {
-	OrgId    string             `json:"orgId"`
-	Username string             `json:"username"`
-	Uuid     openapi_types.UUID `json:"uuid"`
-	Params   ListRolesForGroupsForPrincipalParams
+type ListPermissionsRequestObject struct {
+	Params ListPermissionsParams
 }
 
-type ListRolesForGroupsForPrincipalResponseObject interface {
-	VisitListRolesForGroupsForPrincipalResponse(w http.ResponseWriter) error
+type ListPermissionsResponseObject interface {
+	VisitListPermissionsResponse(w http.ResponseWriter) error
 }
 
-type ListRolesForGroupsForPrincipal200JSONResponse RolePagination
+type ListPermissions200JSONResponse PermissionPagination
 
-func (response ListRolesForGroupsForPrincipal200JSONResponse) VisitListRolesForGroupsForPrincipalResponse(w http.ResponseWriter) error {
+func (response ListPermissions200JSONResponse) VisitListPermissionsResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(200)
 
 	return json.NewEncoder(w).Encode(response)
 }
 
-type ListRolesForGroupsForPrincipal401Response struct {
+type ListPermissions401Response struct {
 }
 
-func (response ListRolesForGroupsForPrincipal401Response) VisitListRolesForGroupsForPrincipalResponse(w http.ResponseWriter) error {
+func (response ListPermissions401Response) VisitListPermissionsResponse(w http.ResponseWriter) error {
 	w.WriteHeader(401)
 	return nil
 }
 
-type ListRolesForGroupsForPrincipal403JSONResponse Error403
+type ListPermissions403JSONResponse Error403
 
-func (response ListRolesForGroupsForPrincipal403JSONResponse) VisitListRolesForGroupsForPrincipalResponse(w http.ResponseWriter) error {
+func (response ListPermissions403JSONResponse) VisitListPermissionsResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(403)
 
 	return json.NewEncoder(w).Encode(response)
 }
 
-type ListRolesForGroupsForPrincipal500JSONResponse Error
+type ListPermissions500JSONResponse Error
 
-func (response ListRolesForGroupsForPrincipal500JSONResponse) VisitListRolesForGroupsForPrincipalResponse(w http.ResponseWriter) error {
+func (response ListPermissions500JSONResponse) VisitListPermissionsResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(500)
 
 	return json.NewEncoder(w).Encode(response)
 }
 
-type ListRoleRequestObject struct {
-	OrgId  string `json:"orgId"`
-	Params ListRoleParams
+type ListPermissionOptionsRequestObject struct {
+	Params ListPermissionOptionsParams
 }
 
-type ListRoleResponseObject interface {
-	VisitListRoleResponse(w http.ResponseWriter) error
+type ListPermissionOptionsResponseObject interface {
+	VisitListPermissionOptionsResponse(w http.ResponseWriter) error
 }
 
-type ListRole200JSONResponse RolePagination
+type ListPermissionOptions200JSONResponse PermissionOptionsPagination
 
-func (response ListRole200JSONResponse) VisitListRoleResponse(w http.ResponseWriter) error {
+func (response ListPermissionOptions200JSONResponse) VisitListPermissionOptionsResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(200)
 
 	return json.NewEncoder(w).Encode(response)
 }
 
-type ListRole401Response struct {
+type ListPermissionOptions401Response struct {
 }
 
-func (response ListRole401Response) VisitListRoleResponse(w http.ResponseWriter) error {
+func (response ListPermissionOptions401Response) VisitListPermissionOptionsResponse(w http.ResponseWriter) error {
 	w.WriteHeader(401)
 	return nil
 }
 
-type ListRole403JSONResponse Error403
+type ListPermissionOptions403JSONResponse Error403
 
-func (response ListRole403JSONResponse) VisitListRoleResponse(w http.ResponseWriter) error {
+func (response ListPermissionOptions403JSONResponse) VisitListPermissionOptionsResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(403)
 
 	return json.NewEncoder(w).Encode(response)
 }
 
-type ListRole500JSONResponse Error
+type ListPermissionOptions500JSONResponse Error
 
-func (response ListRole500JSONResponse) VisitListRoleResponse(w http.ResponseWriter) error {
+func (response ListPermissionOptions500JSONResponse) VisitListPermissionOptionsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListPoliciesRequestObject struct {
+	Params ListPoliciesParams
+}
+
+type ListPoliciesResponseObject interface {
+	VisitListPoliciesResponse(w http.ResponseWriter) error
+}
+
+type ListPolicies200JSONResponse PolicyPagination
+
+func (response ListPolicies200JSONResponse) VisitListPoliciesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListPolicies401Response struct {
+}
+
+func (response ListPolicies401Response) VisitListPoliciesResponse(w http.ResponseWriter) error {
+	w.WriteHeader(401)
+	return nil
+}
+
+type ListPolicies500JSONResponse Error
+
+func (response ListPolicies500JSONResponse) VisitListPoliciesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreatePoliciesRequestObject struct {
+	Body *CreatePoliciesJSONRequestBody
+}
+
+type CreatePoliciesResponseObject interface {
+	VisitCreatePoliciesResponse(w http.ResponseWriter) error
+}
+
+type CreatePolicies201JSONResponse PolicyExtended
+
+func (response CreatePolicies201JSONResponse) VisitCreatePoliciesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreatePolicies401Response struct {
+}
+
+func (response CreatePolicies401Response) VisitCreatePoliciesResponse(w http.ResponseWriter) error {
+	w.WriteHeader(401)
+	return nil
+}
+
+type CreatePolicies500JSONResponse Error
+
+func (response CreatePolicies500JSONResponse) VisitCreatePoliciesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeletePolicyRequestObject struct {
+	Uuid openapi_types.UUID `json:"uuid"`
+}
+
+type DeletePolicyResponseObject interface {
+	VisitDeletePolicyResponse(w http.ResponseWriter) error
+}
+
+type DeletePolicy204Response struct {
+}
+
+func (response DeletePolicy204Response) VisitDeletePolicyResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeletePolicy401Response struct {
+}
+
+func (response DeletePolicy401Response) VisitDeletePolicyResponse(w http.ResponseWriter) error {
+	w.WriteHeader(401)
+	return nil
+}
+
+type DeletePolicy404JSONResponse Error
+
+func (response DeletePolicy404JSONResponse) VisitDeletePolicyResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeletePolicy500JSONResponse Error
+
+func (response DeletePolicy500JSONResponse) VisitDeletePolicyResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetPolicyRequestObject struct {
+	Uuid openapi_types.UUID `json:"uuid"`
+}
+
+type GetPolicyResponseObject interface {
+	VisitGetPolicyResponse(w http.ResponseWriter) error
+}
+
+type GetPolicy200JSONResponse PolicyExtended
+
+func (response GetPolicy200JSONResponse) VisitGetPolicyResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetPolicy401Response struct {
+}
+
+func (response GetPolicy401Response) VisitGetPolicyResponse(w http.ResponseWriter) error {
+	w.WriteHeader(401)
+	return nil
+}
+
+type GetPolicy404JSONResponse Error
+
+func (response GetPolicy404JSONResponse) VisitGetPolicyResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetPolicy500JSONResponse Error
+
+func (response GetPolicy500JSONResponse) VisitGetPolicyResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdatePolicyRequestObject struct {
+	Uuid openapi_types.UUID `json:"uuid"`
+	Body *UpdatePolicyJSONRequestBody
+}
+
+type UpdatePolicyResponseObject interface {
+	VisitUpdatePolicyResponse(w http.ResponseWriter) error
+}
+
+type UpdatePolicy200JSONResponse PolicyExtended
+
+func (response UpdatePolicy200JSONResponse) VisitUpdatePolicyResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdatePolicy401Response struct {
+}
+
+func (response UpdatePolicy401Response) VisitUpdatePolicyResponse(w http.ResponseWriter) error {
+	w.WriteHeader(401)
+	return nil
+}
+
+type UpdatePolicy404JSONResponse Error
+
+func (response UpdatePolicy404JSONResponse) VisitUpdatePolicyResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdatePolicy500JSONResponse Error
+
+func (response UpdatePolicy500JSONResponse) VisitUpdatePolicyResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListPrincipalsRequestObject struct {
+	Params ListPrincipalsParams
+}
+
+type ListPrincipalsResponseObject interface {
+	VisitListPrincipalsResponse(w http.ResponseWriter) error
+}
+
+type ListPrincipals200JSONResponse PrincipalPagination
+
+func (response ListPrincipals200JSONResponse) VisitListPrincipalsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListPrincipals401Response struct {
+}
+
+func (response ListPrincipals401Response) VisitListPrincipalsResponse(w http.ResponseWriter) error {
+	w.WriteHeader(401)
+	return nil
+}
+
+type ListPrincipals403JSONResponse Error403
+
+func (response ListPrincipals403JSONResponse) VisitListPrincipalsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListPrincipals500JSONResponse Error
+
+func (response ListPrincipals500JSONResponse) VisitListPrincipalsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListRolesRequestObject struct {
+	Params ListRolesParams
+}
+
+type ListRolesResponseObject interface {
+	VisitListRolesResponse(w http.ResponseWriter) error
+}
+
+type ListRoles200JSONResponse RolePaginationDynamic
+
+func (response ListRoles200JSONResponse) VisitListRolesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListRoles401Response struct {
+}
+
+func (response ListRoles401Response) VisitListRolesResponse(w http.ResponseWriter) error {
+	w.WriteHeader(401)
+	return nil
+}
+
+type ListRoles403JSONResponse Error403
+
+func (response ListRoles403JSONResponse) VisitListRolesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListRoles500JSONResponse Error
+
+func (response ListRoles500JSONResponse) VisitListRolesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateRoleRequestObject struct {
+	Body *CreateRoleJSONRequestBody
+}
+
+type CreateRoleResponseObject interface {
+	VisitCreateRoleResponse(w http.ResponseWriter) error
+}
+
+type CreateRole201JSONResponse RoleWithAccess
+
+func (response CreateRole201JSONResponse) VisitCreateRoleResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateRole401Response struct {
+}
+
+func (response CreateRole401Response) VisitCreateRoleResponse(w http.ResponseWriter) error {
+	w.WriteHeader(401)
+	return nil
+}
+
+type CreateRole403JSONResponse Error403
+
+func (response CreateRole403JSONResponse) VisitCreateRoleResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateRole500JSONResponse Error
+
+func (response CreateRole500JSONResponse) VisitCreateRoleResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeleteRoleRequestObject struct {
+	Uuid openapi_types.UUID `json:"uuid"`
+}
+
+type DeleteRoleResponseObject interface {
+	VisitDeleteRoleResponse(w http.ResponseWriter) error
+}
+
+type DeleteRole204Response struct {
+}
+
+func (response DeleteRole204Response) VisitDeleteRoleResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteRole401Response struct {
+}
+
+func (response DeleteRole401Response) VisitDeleteRoleResponse(w http.ResponseWriter) error {
+	w.WriteHeader(401)
+	return nil
+}
+
+type DeleteRole403JSONResponse Error403
+
+func (response DeleteRole403JSONResponse) VisitDeleteRoleResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeleteRole404JSONResponse Error
+
+func (response DeleteRole404JSONResponse) VisitDeleteRoleResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeleteRole500JSONResponse Error
+
+func (response DeleteRole500JSONResponse) VisitDeleteRoleResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetRoleRequestObject struct {
+	Uuid   openapi_types.UUID `json:"uuid"`
+	Params GetRoleParams
+}
+
+type GetRoleResponseObject interface {
+	VisitGetRoleResponse(w http.ResponseWriter) error
+}
+
+type GetRole200JSONResponse RoleWithAccess
+
+func (response GetRole200JSONResponse) VisitGetRoleResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetRole401Response struct {
+}
+
+func (response GetRole401Response) VisitGetRoleResponse(w http.ResponseWriter) error {
+	w.WriteHeader(401)
+	return nil
+}
+
+type GetRole403JSONResponse Error403
+
+func (response GetRole403JSONResponse) VisitGetRoleResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetRole404JSONResponse Error
+
+func (response GetRole404JSONResponse) VisitGetRoleResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetRole500JSONResponse Error
+
+func (response GetRole500JSONResponse) VisitGetRoleResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PatchRoleRequestObject struct {
+	Uuid openapi_types.UUID `json:"uuid"`
+	Body *PatchRoleJSONRequestBody
+}
+
+type PatchRoleResponseObject interface {
+	VisitPatchRoleResponse(w http.ResponseWriter) error
+}
+
+type PatchRole200JSONResponse RoleWithAccess
+
+func (response PatchRole200JSONResponse) VisitPatchRoleResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PatchRole401Response struct {
+}
+
+func (response PatchRole401Response) VisitPatchRoleResponse(w http.ResponseWriter) error {
+	w.WriteHeader(401)
+	return nil
+}
+
+type PatchRole403JSONResponse Error403
+
+func (response PatchRole403JSONResponse) VisitPatchRoleResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PatchRole404JSONResponse Error
+
+func (response PatchRole404JSONResponse) VisitPatchRoleResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PatchRole500JSONResponse Error
+
+func (response PatchRole500JSONResponse) VisitPatchRoleResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateRoleRequestObject struct {
+	Uuid openapi_types.UUID `json:"uuid"`
+	Body *UpdateRoleJSONRequestBody
+}
+
+type UpdateRoleResponseObject interface {
+	VisitUpdateRoleResponse(w http.ResponseWriter) error
+}
+
+type UpdateRole200Response struct {
+}
+
+func (response UpdateRole200Response) VisitUpdateRoleResponse(w http.ResponseWriter) error {
+	w.WriteHeader(200)
+	return nil
+}
+
+type UpdateRole401Response struct {
+}
+
+func (response UpdateRole401Response) VisitUpdateRoleResponse(w http.ResponseWriter) error {
+	w.WriteHeader(401)
+	return nil
+}
+
+type UpdateRole403JSONResponse Error403
+
+func (response UpdateRole403JSONResponse) VisitUpdateRoleResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateRole404JSONResponse Error
+
+func (response UpdateRole404JSONResponse) VisitUpdateRoleResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateRole500JSONResponse Error
+
+func (response UpdateRole500JSONResponse) VisitUpdateRoleResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetRoleAccessRequestObject struct {
+	Uuid   openapi_types.UUID `json:"uuid"`
+	Params GetRoleAccessParams
+}
+
+type GetRoleAccessResponseObject interface {
+	VisitGetRoleAccessResponse(w http.ResponseWriter) error
+}
+
+type GetRoleAccess200JSONResponse AccessPagination
+
+func (response GetRoleAccess200JSONResponse) VisitGetRoleAccessResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetRoleAccess401Response struct {
+}
+
+func (response GetRoleAccess401Response) VisitGetRoleAccessResponse(w http.ResponseWriter) error {
+	w.WriteHeader(401)
+	return nil
+}
+
+type GetRoleAccess403JSONResponse Error403
+
+func (response GetRoleAccess403JSONResponse) VisitGetRoleAccessResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetRoleAccess404JSONResponse Error
+
+func (response GetRoleAccess404JSONResponse) VisitGetRoleAccessResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetRoleAccess500JSONResponse Error
+
+func (response GetRoleAccess500JSONResponse) VisitGetRoleAccessResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetStatusRequestObject struct {
+}
+
+type GetStatusResponseObject interface {
+	VisitGetStatusResponse(w http.ResponseWriter) error
+}
+
+type GetStatus200JSONResponse Status
+
+func (response GetStatus200JSONResponse) VisitGetStatusResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetStatus500JSONResponse Error
+
+func (response GetStatus500JSONResponse) VisitGetStatusResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(500)
 
@@ -1762,30 +5354,105 @@ func (response ListRole500JSONResponse) VisitListRoleResponse(w http.ResponseWri
 
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
-	// Get a list of Org Admins for an account or organization
-	// (GET /api/utils/get_org_admin/{org_or_account}/)
-	ListOrgAdmins(ctx context.Context, request ListOrgAdminsRequestObject) (ListOrgAdminsResponseObject, error)
-	// Get a list of tenants
-	// (GET /integrations/tenant/)
-	ListTenants(ctx context.Context, request ListTenantsRequestObject) (ListTenantsResponseObject, error)
+	// Get the permitted access for a principal in the tenant (defaults to principal from the identity header)
+	// (GET /access/)
+	GetPrincipalAccess(ctx context.Context, request GetPrincipalAccessRequestObject) (GetPrincipalAccessResponseObject, error)
+	// List the cross account requests for a user or account
+	// (GET /cross-account-requests/)
+	ListCrossAccountRequests(ctx context.Context, request ListCrossAccountRequestsRequestObject) (ListCrossAccountRequestsResponseObject, error)
+	// Create a cross account request
+	// (POST /cross-account-requests/)
+	CreateCrossAccountRequests(ctx context.Context, request CreateCrossAccountRequestsRequestObject) (CreateCrossAccountRequestsResponseObject, error)
+	// Get a cross account request
+	// (GET /cross-account-requests/{uuid}/)
+	GetCrossAccountRequest(ctx context.Context, request GetCrossAccountRequestRequestObject) (GetCrossAccountRequestResponseObject, error)
+	// Patch a cross account request
+	// (PATCH /cross-account-requests/{uuid}/)
+	PatchCrossAccountRequest(ctx context.Context, request PatchCrossAccountRequestRequestObject) (PatchCrossAccountRequestResponseObject, error)
+	// Update a cross account request
+	// (PUT /cross-account-requests/{uuid}/)
+	PutCrossAccountRequest(ctx context.Context, request PutCrossAccountRequestRequestObject) (PutCrossAccountRequestResponseObject, error)
 	// List the groups for a tenant
-	// (GET /integrations/tenant/{orgId}/groups/)
+	// (GET /groups/)
 	ListGroups(ctx context.Context, request ListGroupsRequestObject) (ListGroupsResponseObject, error)
-	// Get a list of principals from a group in a tenant
-	// (GET /integrations/tenant/{orgId}/groups/{uuid}/principals/)
-	ListPrincipalsForGroup(ctx context.Context, request ListPrincipalsForGroupRequestObject) (ListPrincipalsForGroupResponseObject, error)
-	// List the roles for a group in a tenant
-	// (GET /integrations/tenant/{orgId}/groups/{uuid}/roles/)
+	// Create a group in a tenant
+	// (POST /groups/)
+	CreateGroup(ctx context.Context, request CreateGroupRequestObject) (CreateGroupResponseObject, error)
+	// Delete a group in the tenant
+	// (DELETE /groups/{uuid}/)
+	DeleteGroup(ctx context.Context, request DeleteGroupRequestObject) (DeleteGroupResponseObject, error)
+	// Get a group in the tenant
+	// (GET /groups/{uuid}/)
+	GetGroup(ctx context.Context, request GetGroupRequestObject) (GetGroupResponseObject, error)
+	// Update a group in the tenant
+	// (PUT /groups/{uuid}/)
+	UpdateGroup(ctx context.Context, request UpdateGroupRequestObject) (UpdateGroupResponseObject, error)
+	// Remove a principal from a group in the tenant
+	// (DELETE /groups/{uuid}/principals/)
+	DeletePrincipalFromGroup(ctx context.Context, request DeletePrincipalFromGroupRequestObject) (DeletePrincipalFromGroupResponseObject, error)
+	// Get a list of principals from a group in the tenant
+	// (GET /groups/{uuid}/principals/)
+	GetPrincipalsFromGroup(ctx context.Context, request GetPrincipalsFromGroupRequestObject) (GetPrincipalsFromGroupResponseObject, error)
+	// Add a principal to a group in the tenant
+	// (POST /groups/{uuid}/principals/)
+	AddPrincipalToGroup(ctx context.Context, request AddPrincipalToGroupRequestObject) (AddPrincipalToGroupResponseObject, error)
+	// Remove a role from a group in the tenant
+	// (DELETE /groups/{uuid}/roles/)
+	DeleteRoleFromGroup(ctx context.Context, request DeleteRoleFromGroupRequestObject) (DeleteRoleFromGroupResponseObject, error)
+	// List the roles for a group in the tenant
+	// (GET /groups/{uuid}/roles/)
 	ListRolesForGroup(ctx context.Context, request ListRolesForGroupRequestObject) (ListRolesForGroupResponseObject, error)
-	// List the groups for a principal in a tenant
-	// (GET /integrations/tenant/{orgId}/principal/{username}/groups/)
-	ListGroupsForPrincipal(ctx context.Context, request ListGroupsForPrincipalRequestObject) (ListGroupsForPrincipalResponseObject, error)
-	// List the roles for a group for a principal in a tenant
-	// (GET /integrations/tenant/{orgId}/principal/{username}/groups/{uuid}/roles/)
-	ListRolesForGroupsForPrincipal(ctx context.Context, request ListRolesForGroupsForPrincipalRequestObject) (ListRolesForGroupsForPrincipalResponseObject, error)
+	// Add a role to a group in the tenant
+	// (POST /groups/{uuid}/roles/)
+	AddRoleToGroup(ctx context.Context, request AddRoleToGroupRequestObject) (AddRoleToGroupResponseObject, error)
+	// List the permissions for a tenant
+	// (GET /permissions/)
+	ListPermissions(ctx context.Context, request ListPermissionsRequestObject) (ListPermissionsResponseObject, error)
+	// List the available options for fields of permissions for a tenant
+	// (GET /permissions/options/)
+	ListPermissionOptions(ctx context.Context, request ListPermissionOptionsRequestObject) (ListPermissionOptionsResponseObject, error)
+	// List the policies in the tenant
+	// (GET /policies/)
+	ListPolicies(ctx context.Context, request ListPoliciesRequestObject) (ListPoliciesResponseObject, error)
+	// Create a policy in a tenant
+	// (POST /policies/)
+	CreatePolicies(ctx context.Context, request CreatePoliciesRequestObject) (CreatePoliciesResponseObject, error)
+	// Delete a policy in the tenant
+	// (DELETE /policies/{uuid}/)
+	DeletePolicy(ctx context.Context, request DeletePolicyRequestObject) (DeletePolicyResponseObject, error)
+	// Get a policy in the tenant
+	// (GET /policies/{uuid}/)
+	GetPolicy(ctx context.Context, request GetPolicyRequestObject) (GetPolicyResponseObject, error)
+	// Update a policy in the tenant
+	// (PUT /policies/{uuid}/)
+	UpdatePolicy(ctx context.Context, request UpdatePolicyRequestObject) (UpdatePolicyResponseObject, error)
+	// List the principals for a tenant
+	// (GET /principals/)
+	ListPrincipals(ctx context.Context, request ListPrincipalsRequestObject) (ListPrincipalsResponseObject, error)
 	// List the roles for a tenant
-	// (GET /integrations/tenant/{orgId}/roles/)
-	ListRole(ctx context.Context, request ListRoleRequestObject) (ListRoleResponseObject, error)
+	// (GET /roles/)
+	ListRoles(ctx context.Context, request ListRolesRequestObject) (ListRolesResponseObject, error)
+	// Create a role for a tenant
+	// (POST /roles/)
+	CreateRole(ctx context.Context, request CreateRoleRequestObject) (CreateRoleResponseObject, error)
+	// Delete a role in the tenant
+	// (DELETE /roles/{uuid}/)
+	DeleteRole(ctx context.Context, request DeleteRoleRequestObject) (DeleteRoleResponseObject, error)
+	// Get a role in the tenant
+	// (GET /roles/{uuid}/)
+	GetRole(ctx context.Context, request GetRoleRequestObject) (GetRoleResponseObject, error)
+	// Patch a role in the tenant
+	// (PATCH /roles/{uuid}/)
+	PatchRole(ctx context.Context, request PatchRoleRequestObject) (PatchRoleResponseObject, error)
+	// Update a role in the tenant
+	// (PUT /roles/{uuid}/)
+	UpdateRole(ctx context.Context, request UpdateRoleRequestObject) (UpdateRoleResponseObject, error)
+	// Get access for a role in the tenant
+	// (GET /roles/{uuid}/access/)
+	GetRoleAccess(ctx context.Context, request GetRoleAccessRequestObject) (GetRoleAccessResponseObject, error)
+	// Obtain server status
+	// (GET /status/)
+	GetStatus(ctx context.Context, request GetStatusRequestObject) (GetStatusResponseObject, error)
 }
 
 type StrictHandlerFunc = strictnethttp.StrictHttpHandlerFunc
@@ -1817,26 +5484,25 @@ type strictHandler struct {
 	options     StrictHTTPServerOptions
 }
 
-// ListOrgAdmins operation middleware
-func (sh *strictHandler) ListOrgAdmins(w http.ResponseWriter, r *http.Request, orgOrAccount string, params ListOrgAdminsParams) {
-	var request ListOrgAdminsRequestObject
+// GetPrincipalAccess operation middleware
+func (sh *strictHandler) GetPrincipalAccess(w http.ResponseWriter, r *http.Request, params GetPrincipalAccessParams) {
+	var request GetPrincipalAccessRequestObject
 
-	request.OrgOrAccount = orgOrAccount
 	request.Params = params
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.ListOrgAdmins(ctx, request.(ListOrgAdminsRequestObject))
+		return sh.ssi.GetPrincipalAccess(ctx, request.(GetPrincipalAccessRequestObject))
 	}
 	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "ListOrgAdmins")
+		handler = middleware(handler, "GetPrincipalAccess")
 	}
 
 	response, err := handler(r.Context(), w, r, request)
 
 	if err != nil {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(ListOrgAdminsResponseObject); ok {
-		if err := validResponse.VisitListOrgAdminsResponse(w); err != nil {
+	} else if validResponse, ok := response.(GetPrincipalAccessResponseObject); ok {
+		if err := validResponse.VisitGetPrincipalAccessResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -1844,25 +5510,149 @@ func (sh *strictHandler) ListOrgAdmins(w http.ResponseWriter, r *http.Request, o
 	}
 }
 
-// ListTenants operation middleware
-func (sh *strictHandler) ListTenants(w http.ResponseWriter, r *http.Request, params ListTenantsParams) {
-	var request ListTenantsRequestObject
+// ListCrossAccountRequests operation middleware
+func (sh *strictHandler) ListCrossAccountRequests(w http.ResponseWriter, r *http.Request, params ListCrossAccountRequestsParams) {
+	var request ListCrossAccountRequestsRequestObject
 
 	request.Params = params
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.ListTenants(ctx, request.(ListTenantsRequestObject))
+		return sh.ssi.ListCrossAccountRequests(ctx, request.(ListCrossAccountRequestsRequestObject))
 	}
 	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "ListTenants")
+		handler = middleware(handler, "ListCrossAccountRequests")
 	}
 
 	response, err := handler(r.Context(), w, r, request)
 
 	if err != nil {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(ListTenantsResponseObject); ok {
-		if err := validResponse.VisitListTenantsResponse(w); err != nil {
+	} else if validResponse, ok := response.(ListCrossAccountRequestsResponseObject); ok {
+		if err := validResponse.VisitListCrossAccountRequestsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateCrossAccountRequests operation middleware
+func (sh *strictHandler) CreateCrossAccountRequests(w http.ResponseWriter, r *http.Request) {
+	var request CreateCrossAccountRequestsRequestObject
+
+	var body CreateCrossAccountRequestsJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateCrossAccountRequests(ctx, request.(CreateCrossAccountRequestsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateCrossAccountRequests")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateCrossAccountRequestsResponseObject); ok {
+		if err := validResponse.VisitCreateCrossAccountRequestsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetCrossAccountRequest operation middleware
+func (sh *strictHandler) GetCrossAccountRequest(w http.ResponseWriter, r *http.Request, uuid openapi_types.UUID, params GetCrossAccountRequestParams) {
+	var request GetCrossAccountRequestRequestObject
+
+	request.Uuid = uuid
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetCrossAccountRequest(ctx, request.(GetCrossAccountRequestRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetCrossAccountRequest")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetCrossAccountRequestResponseObject); ok {
+		if err := validResponse.VisitGetCrossAccountRequestResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PatchCrossAccountRequest operation middleware
+func (sh *strictHandler) PatchCrossAccountRequest(w http.ResponseWriter, r *http.Request, uuid openapi_types.UUID) {
+	var request PatchCrossAccountRequestRequestObject
+
+	request.Uuid = uuid
+
+	var body PatchCrossAccountRequestJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PatchCrossAccountRequest(ctx, request.(PatchCrossAccountRequestRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PatchCrossAccountRequest")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PatchCrossAccountRequestResponseObject); ok {
+		if err := validResponse.VisitPatchCrossAccountRequestResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PutCrossAccountRequest operation middleware
+func (sh *strictHandler) PutCrossAccountRequest(w http.ResponseWriter, r *http.Request, uuid openapi_types.UUID) {
+	var request PutCrossAccountRequestRequestObject
+
+	request.Uuid = uuid
+
+	var body PutCrossAccountRequestJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PutCrossAccountRequest(ctx, request.(PutCrossAccountRequestRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PutCrossAccountRequest")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PutCrossAccountRequestResponseObject); ok {
+		if err := validResponse.VisitPutCrossAccountRequestResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -1871,10 +5661,9 @@ func (sh *strictHandler) ListTenants(w http.ResponseWriter, r *http.Request, par
 }
 
 // ListGroups operation middleware
-func (sh *strictHandler) ListGroups(w http.ResponseWriter, r *http.Request, orgId string, params ListGroupsParams) {
+func (sh *strictHandler) ListGroups(w http.ResponseWriter, r *http.Request, params ListGroupsParams) {
 	var request ListGroupsRequestObject
 
-	request.OrgId = orgId
 	request.Params = params
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
@@ -1897,27 +5686,229 @@ func (sh *strictHandler) ListGroups(w http.ResponseWriter, r *http.Request, orgI
 	}
 }
 
-// ListPrincipalsForGroup operation middleware
-func (sh *strictHandler) ListPrincipalsForGroup(w http.ResponseWriter, r *http.Request, orgId string, uuid openapi_types.UUID, params ListPrincipalsForGroupParams) {
-	var request ListPrincipalsForGroupRequestObject
+// CreateGroup operation middleware
+func (sh *strictHandler) CreateGroup(w http.ResponseWriter, r *http.Request) {
+	var request CreateGroupRequestObject
 
-	request.OrgId = orgId
-	request.Uuid = uuid
-	request.Params = params
+	var body CreateGroupJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.ListPrincipalsForGroup(ctx, request.(ListPrincipalsForGroupRequestObject))
+		return sh.ssi.CreateGroup(ctx, request.(CreateGroupRequestObject))
 	}
 	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "ListPrincipalsForGroup")
+		handler = middleware(handler, "CreateGroup")
 	}
 
 	response, err := handler(r.Context(), w, r, request)
 
 	if err != nil {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(ListPrincipalsForGroupResponseObject); ok {
-		if err := validResponse.VisitListPrincipalsForGroupResponse(w); err != nil {
+	} else if validResponse, ok := response.(CreateGroupResponseObject); ok {
+		if err := validResponse.VisitCreateGroupResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteGroup operation middleware
+func (sh *strictHandler) DeleteGroup(w http.ResponseWriter, r *http.Request, uuid openapi_types.UUID) {
+	var request DeleteGroupRequestObject
+
+	request.Uuid = uuid
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteGroup(ctx, request.(DeleteGroupRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteGroup")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteGroupResponseObject); ok {
+		if err := validResponse.VisitDeleteGroupResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetGroup operation middleware
+func (sh *strictHandler) GetGroup(w http.ResponseWriter, r *http.Request, uuid openapi_types.UUID) {
+	var request GetGroupRequestObject
+
+	request.Uuid = uuid
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetGroup(ctx, request.(GetGroupRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetGroup")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetGroupResponseObject); ok {
+		if err := validResponse.VisitGetGroupResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateGroup operation middleware
+func (sh *strictHandler) UpdateGroup(w http.ResponseWriter, r *http.Request, uuid openapi_types.UUID) {
+	var request UpdateGroupRequestObject
+
+	request.Uuid = uuid
+
+	var body UpdateGroupJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateGroup(ctx, request.(UpdateGroupRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateGroup")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateGroupResponseObject); ok {
+		if err := validResponse.VisitUpdateGroupResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeletePrincipalFromGroup operation middleware
+func (sh *strictHandler) DeletePrincipalFromGroup(w http.ResponseWriter, r *http.Request, uuid openapi_types.UUID, params DeletePrincipalFromGroupParams) {
+	var request DeletePrincipalFromGroupRequestObject
+
+	request.Uuid = uuid
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeletePrincipalFromGroup(ctx, request.(DeletePrincipalFromGroupRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeletePrincipalFromGroup")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeletePrincipalFromGroupResponseObject); ok {
+		if err := validResponse.VisitDeletePrincipalFromGroupResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetPrincipalsFromGroup operation middleware
+func (sh *strictHandler) GetPrincipalsFromGroup(w http.ResponseWriter, r *http.Request, uuid openapi_types.UUID, params GetPrincipalsFromGroupParams) {
+	var request GetPrincipalsFromGroupRequestObject
+
+	request.Uuid = uuid
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetPrincipalsFromGroup(ctx, request.(GetPrincipalsFromGroupRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetPrincipalsFromGroup")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetPrincipalsFromGroupResponseObject); ok {
+		if err := validResponse.VisitGetPrincipalsFromGroupResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// AddPrincipalToGroup operation middleware
+func (sh *strictHandler) AddPrincipalToGroup(w http.ResponseWriter, r *http.Request, uuid openapi_types.UUID) {
+	var request AddPrincipalToGroupRequestObject
+
+	request.Uuid = uuid
+
+	var body AddPrincipalToGroupJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.AddPrincipalToGroup(ctx, request.(AddPrincipalToGroupRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "AddPrincipalToGroup")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(AddPrincipalToGroupResponseObject); ok {
+		if err := validResponse.VisitAddPrincipalToGroupResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteRoleFromGroup operation middleware
+func (sh *strictHandler) DeleteRoleFromGroup(w http.ResponseWriter, r *http.Request, uuid openapi_types.UUID, params DeleteRoleFromGroupParams) {
+	var request DeleteRoleFromGroupRequestObject
+
+	request.Uuid = uuid
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteRoleFromGroup(ctx, request.(DeleteRoleFromGroupRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteRoleFromGroup")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteRoleFromGroupResponseObject); ok {
+		if err := validResponse.VisitDeleteRoleFromGroupResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -1926,10 +5917,9 @@ func (sh *strictHandler) ListPrincipalsForGroup(w http.ResponseWriter, r *http.R
 }
 
 // ListRolesForGroup operation middleware
-func (sh *strictHandler) ListRolesForGroup(w http.ResponseWriter, r *http.Request, orgId string, uuid openapi_types.UUID, params ListRolesForGroupParams) {
+func (sh *strictHandler) ListRolesForGroup(w http.ResponseWriter, r *http.Request, uuid openapi_types.UUID, params ListRolesForGroupParams) {
 	var request ListRolesForGroupRequestObject
 
-	request.OrgId = orgId
 	request.Uuid = uuid
 	request.Params = params
 
@@ -1953,27 +5943,32 @@ func (sh *strictHandler) ListRolesForGroup(w http.ResponseWriter, r *http.Reques
 	}
 }
 
-// ListGroupsForPrincipal operation middleware
-func (sh *strictHandler) ListGroupsForPrincipal(w http.ResponseWriter, r *http.Request, orgId string, username string, params ListGroupsForPrincipalParams) {
-	var request ListGroupsForPrincipalRequestObject
+// AddRoleToGroup operation middleware
+func (sh *strictHandler) AddRoleToGroup(w http.ResponseWriter, r *http.Request, uuid openapi_types.UUID) {
+	var request AddRoleToGroupRequestObject
 
-	request.OrgId = orgId
-	request.Username = username
-	request.Params = params
+	request.Uuid = uuid
+
+	var body AddRoleToGroupJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.ListGroupsForPrincipal(ctx, request.(ListGroupsForPrincipalRequestObject))
+		return sh.ssi.AddRoleToGroup(ctx, request.(AddRoleToGroupRequestObject))
 	}
 	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "ListGroupsForPrincipal")
+		handler = middleware(handler, "AddRoleToGroup")
 	}
 
 	response, err := handler(r.Context(), w, r, request)
 
 	if err != nil {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(ListGroupsForPrincipalResponseObject); ok {
-		if err := validResponse.VisitListGroupsForPrincipalResponse(w); err != nil {
+	} else if validResponse, ok := response.(AddRoleToGroupResponseObject); ok {
+		if err := validResponse.VisitAddRoleToGroupResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -1981,28 +5976,329 @@ func (sh *strictHandler) ListGroupsForPrincipal(w http.ResponseWriter, r *http.R
 	}
 }
 
-// ListRolesForGroupsForPrincipal operation middleware
-func (sh *strictHandler) ListRolesForGroupsForPrincipal(w http.ResponseWriter, r *http.Request, orgId string, username string, uuid openapi_types.UUID, params ListRolesForGroupsForPrincipalParams) {
-	var request ListRolesForGroupsForPrincipalRequestObject
+// ListPermissions operation middleware
+func (sh *strictHandler) ListPermissions(w http.ResponseWriter, r *http.Request, params ListPermissionsParams) {
+	var request ListPermissionsRequestObject
 
-	request.OrgId = orgId
-	request.Username = username
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListPermissions(ctx, request.(ListPermissionsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListPermissions")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListPermissionsResponseObject); ok {
+		if err := validResponse.VisitListPermissionsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListPermissionOptions operation middleware
+func (sh *strictHandler) ListPermissionOptions(w http.ResponseWriter, r *http.Request, params ListPermissionOptionsParams) {
+	var request ListPermissionOptionsRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListPermissionOptions(ctx, request.(ListPermissionOptionsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListPermissionOptions")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListPermissionOptionsResponseObject); ok {
+		if err := validResponse.VisitListPermissionOptionsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListPolicies operation middleware
+func (sh *strictHandler) ListPolicies(w http.ResponseWriter, r *http.Request, params ListPoliciesParams) {
+	var request ListPoliciesRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListPolicies(ctx, request.(ListPoliciesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListPolicies")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListPoliciesResponseObject); ok {
+		if err := validResponse.VisitListPoliciesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreatePolicies operation middleware
+func (sh *strictHandler) CreatePolicies(w http.ResponseWriter, r *http.Request) {
+	var request CreatePoliciesRequestObject
+
+	var body CreatePoliciesJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreatePolicies(ctx, request.(CreatePoliciesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreatePolicies")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreatePoliciesResponseObject); ok {
+		if err := validResponse.VisitCreatePoliciesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeletePolicy operation middleware
+func (sh *strictHandler) DeletePolicy(w http.ResponseWriter, r *http.Request, uuid openapi_types.UUID) {
+	var request DeletePolicyRequestObject
+
+	request.Uuid = uuid
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeletePolicy(ctx, request.(DeletePolicyRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeletePolicy")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeletePolicyResponseObject); ok {
+		if err := validResponse.VisitDeletePolicyResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetPolicy operation middleware
+func (sh *strictHandler) GetPolicy(w http.ResponseWriter, r *http.Request, uuid openapi_types.UUID) {
+	var request GetPolicyRequestObject
+
+	request.Uuid = uuid
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetPolicy(ctx, request.(GetPolicyRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetPolicy")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetPolicyResponseObject); ok {
+		if err := validResponse.VisitGetPolicyResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdatePolicy operation middleware
+func (sh *strictHandler) UpdatePolicy(w http.ResponseWriter, r *http.Request, uuid openapi_types.UUID) {
+	var request UpdatePolicyRequestObject
+
+	request.Uuid = uuid
+
+	var body UpdatePolicyJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdatePolicy(ctx, request.(UpdatePolicyRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdatePolicy")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdatePolicyResponseObject); ok {
+		if err := validResponse.VisitUpdatePolicyResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListPrincipals operation middleware
+func (sh *strictHandler) ListPrincipals(w http.ResponseWriter, r *http.Request, params ListPrincipalsParams) {
+	var request ListPrincipalsRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListPrincipals(ctx, request.(ListPrincipalsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListPrincipals")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListPrincipalsResponseObject); ok {
+		if err := validResponse.VisitListPrincipalsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListRoles operation middleware
+func (sh *strictHandler) ListRoles(w http.ResponseWriter, r *http.Request, params ListRolesParams) {
+	var request ListRolesRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListRoles(ctx, request.(ListRolesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListRoles")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListRolesResponseObject); ok {
+		if err := validResponse.VisitListRolesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateRole operation middleware
+func (sh *strictHandler) CreateRole(w http.ResponseWriter, r *http.Request) {
+	var request CreateRoleRequestObject
+
+	var body CreateRoleJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateRole(ctx, request.(CreateRoleRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateRole")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateRoleResponseObject); ok {
+		if err := validResponse.VisitCreateRoleResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteRole operation middleware
+func (sh *strictHandler) DeleteRole(w http.ResponseWriter, r *http.Request, uuid openapi_types.UUID) {
+	var request DeleteRoleRequestObject
+
+	request.Uuid = uuid
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteRole(ctx, request.(DeleteRoleRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteRole")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteRoleResponseObject); ok {
+		if err := validResponse.VisitDeleteRoleResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetRole operation middleware
+func (sh *strictHandler) GetRole(w http.ResponseWriter, r *http.Request, uuid openapi_types.UUID, params GetRoleParams) {
+	var request GetRoleRequestObject
+
 	request.Uuid = uuid
 	request.Params = params
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.ListRolesForGroupsForPrincipal(ctx, request.(ListRolesForGroupsForPrincipalRequestObject))
+		return sh.ssi.GetRole(ctx, request.(GetRoleRequestObject))
 	}
 	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "ListRolesForGroupsForPrincipal")
+		handler = middleware(handler, "GetRole")
 	}
 
 	response, err := handler(r.Context(), w, r, request)
 
 	if err != nil {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(ListRolesForGroupsForPrincipalResponseObject); ok {
-		if err := validResponse.VisitListRolesForGroupsForPrincipalResponse(w); err != nil {
+	} else if validResponse, ok := response.(GetRoleResponseObject); ok {
+		if err := validResponse.VisitGetRoleResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -2010,26 +6306,116 @@ func (sh *strictHandler) ListRolesForGroupsForPrincipal(w http.ResponseWriter, r
 	}
 }
 
-// ListRole operation middleware
-func (sh *strictHandler) ListRole(w http.ResponseWriter, r *http.Request, orgId string, params ListRoleParams) {
-	var request ListRoleRequestObject
+// PatchRole operation middleware
+func (sh *strictHandler) PatchRole(w http.ResponseWriter, r *http.Request, uuid openapi_types.UUID) {
+	var request PatchRoleRequestObject
 
-	request.OrgId = orgId
-	request.Params = params
+	request.Uuid = uuid
+
+	var body PatchRoleJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.ListRole(ctx, request.(ListRoleRequestObject))
+		return sh.ssi.PatchRole(ctx, request.(PatchRoleRequestObject))
 	}
 	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "ListRole")
+		handler = middleware(handler, "PatchRole")
 	}
 
 	response, err := handler(r.Context(), w, r, request)
 
 	if err != nil {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(ListRoleResponseObject); ok {
-		if err := validResponse.VisitListRoleResponse(w); err != nil {
+	} else if validResponse, ok := response.(PatchRoleResponseObject); ok {
+		if err := validResponse.VisitPatchRoleResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateRole operation middleware
+func (sh *strictHandler) UpdateRole(w http.ResponseWriter, r *http.Request, uuid openapi_types.UUID) {
+	var request UpdateRoleRequestObject
+
+	request.Uuid = uuid
+
+	var body UpdateRoleJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateRole(ctx, request.(UpdateRoleRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateRole")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateRoleResponseObject); ok {
+		if err := validResponse.VisitUpdateRoleResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetRoleAccess operation middleware
+func (sh *strictHandler) GetRoleAccess(w http.ResponseWriter, r *http.Request, uuid openapi_types.UUID, params GetRoleAccessParams) {
+	var request GetRoleAccessRequestObject
+
+	request.Uuid = uuid
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetRoleAccess(ctx, request.(GetRoleAccessRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetRoleAccess")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetRoleAccessResponseObject); ok {
+		if err := validResponse.VisitGetRoleAccessResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetStatus operation middleware
+func (sh *strictHandler) GetStatus(w http.ResponseWriter, r *http.Request) {
+	var request GetStatusRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetStatus(ctx, request.(GetStatusRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetStatus")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetStatusResponseObject); ok {
+		if err := validResponse.VisitGetStatusResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -2040,53 +6426,119 @@ func (sh *strictHandler) ListRole(w http.ResponseWriter, r *http.Request, orgId 
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"H4sIAAAAAAAC/+xce3PbNhL/KhjczbSd0YPyI04002md+pLxTRLnUvuPXs6jwCQoIkcCLAC6Vj367jcL",
-	"8CmCetiyrVz9nyQvsIvF7u+3WJC+xb5IUsEp1wqPb3FKJEmoptJ8+1dG5ewdS5iGbwFVvmSpZoLjMf5Y",
-	"SKJQSKRoTH3N+BTpiCKSiIxrJEIUEE2QpDqTnAYD3MMMxv4O8+Ie5iSheIxjo6GHlR/RhFhVIclijccj",
-	"r4cTcsOSLIEvHnxlPP/aw3qWwgSMazqlEs/nPWvzWRgquqHRwowpjO6y1Uq5ja0b5zmMmxejjHP/IaWQ",
-	"xudSpFRqRs3PFH42n5imiWoLBFQTFhvRG5KkMej4IDQKRcaNi3O9SkvGpxiUaqIz1Rxx4O23ReflL+Lq",
-	"K/U1rn4gUpKZkZD094xJGuDx58LYy3nPLgdm3c6KfhMZCgTiQqOIXFOUUpkwpZjgSAv4FgqZIB0xhYgP",
-	"u+teucikT5sz59qeyk9vpchSlw9qcVo34BjV/gTRaSY4dtlvQ7Q+uEt2wTwzsDTuLDOZQ+L4LMTjz7f4",
-	"75KGeIz/NqywYpgH8tAuZ95bLnVxcXqyUuicJVRpkqQ0MLJNB5EgYXxS5lot7UISK1ou8UqImBIO/khj",
-	"oiFMNhwlGfdZSuJfAMRgzLKk7mEpYrqmqJopTZN1zJjPy+34SKaMkyIw1tuVd0zp2ri2NwHiGhm5co8h",
-	"KlaFuZn1spUcsJQFi1rxHzP+35WGVBO8M+LzHk6oXch6w96DtAHiMzk9hohq+nQBuJIWLH0NBP15Cr8P",
-	"fJG4kjBkUulJOxX/KSLukmdBQ260t++KHKYmAHPXzUm1zJwhzNQExkpOmuZ3xjxTEyGnE1J4ZKWGmDgX",
-	"eSKoa42x8Em8IEr55OJXl3CmwPDFmcHxDhwzsVXs5dNnShlV98iUxSBvpYqJsKZ3hiRlQ3lF/OH3klrS",
-	"Uz8Mf7LFyo/efzLP23thyqwfRx7uYUBFovEYZ5I5N4xspuHV5io4vdlIxcHmKlJJr5lYZPTlavY2VTNv",
-	"bNn7HI6aO+YX9FBase/V5mVcvzjA7oLxY8FGjrqqDU8qYTr6+nMy09SPfJFjVKnIjtgGaNXhaDWcrI0f",
-	"v4L964OCXe7K8qYc3Ms9cFl37HugbJd/t6OzoetxEEpwusa8VWStKsxarjI4dVd8+yQsFdy1/oXxzvI3",
-	"YCqNycwRVscw5oONgDWq5g4NXUUziG9UMxsPPEbJ7PtUqTVr0zvU1yRNY+absGwe7ypX+kSTWExdfm/G",
-	"z52rdREzf/ZA9Tds1NMXFUV83SPnziknXC+rdYlvSGqyUI4evXzlLEfXKlqBAxYkDw5fuHiusvHp3Z37",
-	"6j7ermVluxaQlGja9Are80av+t6ovzc6Hx2N9/fGey//XSfugGja18wNYIkIWMjcU+73vYNz72i8dzg+",
-	"XHvKhZUWFtc0XToaIAaw2iSaLUQAPjyiL7zwldd/6Xt+/+AqGPVfHhGvvzc62D86fEUIHfmNqgtmWEm3",
-	"INS2CsQYD0W7E3ian48QfJhKC2Lo+OOp6QxCyqHXRNEAHRsQRb8IrqWIB7iHY+ZTrgxn5E3B47cf3/X3",
-	"B1AsZjLGYxxpnarxcChSym2JORByOsxHqmE5AKKMaeOXe1h0TaWyyxoNPDsraCYpw2O8b37q4ZToyGyJ",
-	"KYAzzWI1nFJdVWrDW/go5CTHgvkQpKeuPipkHHDxmZwic+BRxkjCUT4WCYmEnBLO/rRJaSyyizoN8hmK",
-	"05Iy1lWN58+L6s5qM6HTE5j8ONdzemI064gibRM379vCcmtt28bKcD147BG3aue2Am15E1lSLRm9ZnwK",
-	"C0bEeuPK7JRY9EdXV9noXGYU5UBqn+swXeLrZc9lswviKicPa639daXzpvr8EgxVqYBIBtv2PM8ecrim",
-	"OclUhcHwq7JQXq1lnQN0Hc4hiVeFH4T8gbWjKfqaBOiUp5Y+D7xRW+KCk0xHQrI/TRGFD7yDrS3H9vgd",
-	"K/ggNHojMm40Hm7RgZ0aLzi9SamvaYAKmR5WWZIQOcNj/JZqRFB8h7zWZAo5C0k6sc2PS5h6yGowNrS5",
-	"uRpQrJxCjAO+KRHTE6HRp9fHvzgRxHL1SvxoZmzIYk2lufbJtV3NkI6EougPpiM0lSJLYaESMNdyXl7l",
-	"duVvQYwTweOZ+3Koq9D8ZlO1Va8tSdTc0c9ZutUs1WX0FzmY167dCQgUfxrMhybGVXc+vp6hPHJ7qIwg",
-	"RCRFSkiwjnFElE95YIkvoBKyyKZO3mtpp6u5SNic7cN16P002JTVHy7tWiXDcblnUCUrpEWOQuZ3GljH",
-	"GXihN2ksgqpZ74KbvCSuVlcebFaespWemWoTymu8qrYx+wobbM2DHb4mcUYH6I2QiHGoO2kp1UMqS9N4",
-	"hr7rf4euaCgkNRtnvGQHgogfIaLG6CczbHI1+7Gfx4vzuj0Xwq5iKB/nOJV0F29n5gOJUdrBCVczVOsX",
-	"Or1f/fnOVWOlr+hBg2Lbn0BhTDorxbyF4VBdUcpDov7ilaQDw45Rav9OgzLsc041xzK1AcjvbxdyYUKH",
-	"xadcZWHIfEa5rj1pYPLUrMDG/66wgGFVyKw8LU2JVuFjQQb2an5tLrgFVJkPy+vv7bNDLXHa3FA2mdUb",
-	"Ia3pO8ITC7FyUsVzKEWC/oiYH0GkTKlGlffcBuTI3a1/ZdtjXVyxFlb2wAaU39CXYi++oEyBuFWAIK4J",
-	"lP2KEulHXShUTjRZFwwfkWw7OKzpiofgsRW8sZTLqvuijfdc5JQWz/In7UzS8bhKOAsRlQN66GqWEmU2",
-	"niCfxDHE7+n5YAXjtY83ufkmik3Bctl7XD5yXa0tOYjUgoBoTfyIBiZ186eYnk8n2zud1FxtcJLkkATc",
-	"sC2yghP69nnKnPs7ieoT6PxmOGo3aMjsU+naL3cnHhg/2V7x7bSuNvQeRtYN2HluLD3wrR/vNtpoemNv",
-	"XCY2HRc2e409Xphgs5h8rJPoQ7LvwgW58zBY8IF1vj2r1Pj2WzoGVksoF7BT58GWi+9JtiWFD2+LUHva",
-	"1uEbIavHlv56bcSLfBOKtaQ1X7hYvoKHexQTz73LJyK35zbeX7GNV/Vo3Nhd4d/98HtXTlA7iek7ALvP",
-	"Z7jnc9FOUsdzzb/jNf/2eeSpSGI36aDzJndbAPkwl8v11yPuZFbj/YpdvfteoVul1GfhrHjnPyHaj4wL",
-	"JAObSPG4my1xv1PI8r5seG/Zvk3MlE7cTonUzBQN9Ib4+l79rIbnfJF22mT+iJc8Soprbzw/+qOk/w88",
-	"vJAWJS03303ZfLNJUJ27QkbjwHBSrs0+egxe6dp4EgQTO8xpvD0FTBjHverzxF/b1id7juY8oqhGtyZB",
-	"v1c/1NoSRbD07L1TjdQH6DxiCjEFKW6S0CLAAP0mMpSQGSKxEmA3IsgXSUL6isICyzOwFnYEEhwlWaxZ",
-	"GjfM6d6OSmbz9VZLeOKV1jV0PRpQiuDtsmrRbM/pHbV5bDl9bdKsf+r6ud15MTXFN9t4MZu406Vzqz42",
-	"9eel/ac9VF67C9DynR2lyZQiK9h6CyjRsRoU/5Bh4Nvn2gdmyEDSICJ64Iukei/9euRgxlJVKkWQmX95",
-	"s5m+Lk2X5ZrbGE+L15DIlciKbSwzqnyPdcWwafHYbz6u+p8xKwY2nqbKB9deW76c/y8AAP//48w5979K",
-	"AAA=",
+	"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",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file
