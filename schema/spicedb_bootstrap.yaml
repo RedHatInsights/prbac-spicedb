@@ -5,7 +5,11 @@ schema: |-
     relation member: user | group#member
   }
 
+  definition prbac_perm {}
+
   definition role {
+    relation prbac_perm: prbac_perm
+
     // content namespace
     relation content_host_manage_subscription: user:*
 
@@ -29,6 +33,8 @@ schema: |-
   definition role_binding {
     relation subject : user | group#member
     relation granted: role
+
+    permission prbac_perm = granted->prbac_perm
 
     // {resourceType}_{action} = subject & granted->{resourceType}_{action}
     permission content_host_manage_subscription = subject & granted->content_host_manage_subscription
