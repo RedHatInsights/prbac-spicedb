@@ -159,13 +159,13 @@ schema: |-
     relation service: dispatcher/service
     relation host: inventory/host
 
-    permission view = ((service->is_remediations & host->dispatcher_view_remediations) + (service->is_configmanager & host->dispatcher_view_configmanager) + (service->is_tasks & host->dispatcher_view_tasks)) & host->view
+    permission view = service->view & host->view
   }
 
   definition dispatcher/service {
-    relation is_remediations: user:*
-    relation is_configmanager: user:*
-    relation is_tasks: user:*
+    relation user_grant: rolebinding
+
+    permission view = user_grant->dispatcher_view_runs
   }
   
   // knowing that a metric with labels...
