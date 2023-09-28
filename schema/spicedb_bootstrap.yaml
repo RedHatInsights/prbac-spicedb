@@ -20,6 +20,7 @@ schema: |-
     relation dispatcher_view_remediations: user:*
     relation dispatcher_view_tasks: user:*
     relation dispatcher_view_configmanager: user:*
+    relation dispatcher_view_runs: user:*
     
     relation inventory_view_hosts: user:*
 
@@ -38,6 +39,7 @@ schema: |-
     permission dispatcher_view_remediations = subject & granted->dispatcher_view_remediations
     permission dispatcher_view_tasks = subject & granted->dispatcher_view_tasks
     permission dispatcher_view_configmanager = subject & granted->dispatcher_view_configmanager
+    permission dispatcher_view_runs = subject & granted->dispatcher_view_runs
 
     permission inventory_view_hosts = subject & granted->inventory_view_hosts
 
@@ -85,6 +87,7 @@ schema: |-
     permission dispatcher_view_remediations = user_grant->dispatcher_view_remediations + parent->dispatcher_view_remediations
     permission dispatcher_view_configmanager = user_grant->dispatcher_view_configmanager + parent->dispatcher_view_configmanager
     permission dispatcher_view_tasks = user_grant->dispatcher_view_tasks + parent->dispatcher_view_tasks
+    permission dispatcher_view_runs = user_grant->dispatcher_view_runs + parent->dispatcher_view_runs
 
     permission inventory_view_hosts = user_grant->inventory_view_hosts + parent->inventory_view_hosts
 
@@ -195,9 +198,11 @@ relationships: |-
   //Static data
   role:remediations_admin#dispatcher_view_remediations@user:*
   role:remediations_admin#inventory_view_hosts@user:*
+  role:remediations_admin#dispatcher_view_runs@user:*
 
   role:configmanager_admin#dispatcher_view_configmanager@user:*
   role:configmanager_admin#inventory_view_hosts@user:*
+  role:configmanager_admin#dispatcher_view_runs@user:*
 
   role:tasks_admin#dispatcher_view_tasks@user:*
   role:tasks_admin#inventory_view_hosts@user:*
@@ -214,16 +219,25 @@ relationships: |-
   role_binding:aspian_telemetry_configmanager_admins#granted@role:configmanager_admin
   role_binding:aspian_telemetry_configmanager_admins#subject@user:david
   role_binding:aspian_telemetry_configmanager_admins#subject@user:alice
-  workspace:aspian/telemetry#user_grant@role_binding:aspian_telemetry_configmanager_admins
+  dispatcher/service:remediations#user_grant@role_binding:aspian_telemetry_configmanager_admins
 
   role_binding:aspian_observability_configmanager_admins#granted@role:configmanager_admin
   role_binding:aspian_observability_configmanager_admins#subject@user:dani
-  workspace:aspian/observability#user_grant@role_binding:aspian_observability_configmanager_admins
+  dispatcher/service:configmanager#user_grant@role_binding:aspian_observability_configmanager_admins
 
   inventory/host:da7afeed-da04-4651-84d1-187fa5c23f6c#workspace@workspace:aspian/telemetry
   inventory/host:41e12750-da04-4651-84d1-187fa5c23f6c#workspace@workspace:aspian/observability
   
-  // PRBAC perms
+  // PRBAC assertions
+  //assertTrue:
+  //  - "workspace:aspian_root#dispatcher_view_runs@user:sara"
+  //  - "dispatcher/service:remediations#view@user:david"
+  //  - "dispatcher/service:remediations#view@user:alice"
 
+  //assertFalse:
+  //  - "workspace:aspian_root#dispatcher_view_runs@user:david"
+  //  - "workspace:aspian_root#dispatcher_view_runs@user:alice"
+  //  - "workspace:aspian_root#dispatcher_view_runs@user:dani"
+  //  - "dispatcher/service:remediations#view@user:dani"
 assertions: null
 validation: {}
