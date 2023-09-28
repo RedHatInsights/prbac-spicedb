@@ -163,7 +163,7 @@ schema: |-
   }
 
   definition dispatcher/service {
-    relation user_grant: rolebinding
+    relation user_grant: role_binding
 
     permission view = user_grant->dispatcher_view_runs
   }
