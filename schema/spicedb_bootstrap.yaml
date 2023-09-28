@@ -193,10 +193,6 @@ schema: |-
   // <GENERATED_DEFINITIONS_HERE
 relationships: |-
   //Static data
-  dispatcher/service:remediations#is_remediations@user:*
-  dispatcher/service:configmanager#is_configmanager@user:*
-  dispatcher/service:tasks#is_tasks@user:*
-
   role:remediations_admin#dispatcher_view_remediations@user:*
   role:remediations_admin#inventory_view_hosts@user:*
 
@@ -226,5 +222,8 @@ relationships: |-
 
   inventory/host:da7afeed-da04-4651-84d1-187fa5c23f6c#workspace@workspace:aspian/telemetry
   inventory/host:41e12750-da04-4651-84d1-187fa5c23f6c#workspace@workspace:aspian/observability
+  
+  // PRBAC perms
+
 assertions: null
 validation: {}
