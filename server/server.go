@@ -2,10 +2,13 @@ package server
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	v1 "github.com/authzed/authzed-go/proto/authzed/api/v1"
 	"github.com/authzed/authzed-go/v1"
 	"github.com/merlante/prbac-spicedb/api"
+	"io"
+	"strings"
 )
 
 type Filter struct {
@@ -38,7 +41,7 @@ func (p PrbacSpicedbServer) GetPrincipalAccess(ctx context.Context, request api.
 
 	servicePermissions := p.RbacServices[request.Params.Application]
 	for key := range servicePermissions {
-		permission := servicePermissions[key]
+		servicePermission := servicePermissions[key]
 
 		// Step 1: If this user has checkpermission on root workspace, they get permission with no attribute filters
 
@@ -47,7 +50,7 @@ func (p PrbacSpicedbServer) GetPrincipalAccess(ctx context.Context, request api.
 				ObjectType: "workspace",
 				ObjectId:   rootWorkspace,
 			},
-			Permission: permission.Permission,
+			Permission: servicePermission.Permission,
 			Subject: &v1.SubjectReference{Object: &v1.ObjectReference{
 				ObjectType: "user",
 				ObjectId:   *request.Params.Username,
@@ -68,6 +71,74 @@ func (p PrbacSpicedbServer) GetPrincipalAccess(ctx context.Context, request api.
 		}
 
 		// STEP 2: If they don't have unrestricted permission, check for attribute filtered permissions
+
+		containingResourceType := servicePermission.Filter.ResourceType
+		permission := "view"
+
+		lrClient, err := p.SpicedbClient.LookupResources(context.TODO(), &v1.LookupResourcesRequest{
+			ResourceObjectType: containingResourceType,
+			Permission:         permission,
+			Subject: &v1.SubjectReference{
+				Object: &v1.ObjectReference{
+					ObjectType: "user",
+					ObjectId:   *request.Params.Username,
+				},
+			},
+		})
+
+		if err != nil {
+			fmt.Errorf("Spicedb error: %v", err)
+			return api.GetPrincipalAccess500JSONResponse{}, err
+		}
+
+		var containingResources []string
+		for {
+			next, err := lrClient.Recv()
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			if err != nil {
+				fmt.Errorf("Spicedb error: %v", err)
+				return api.GetPrincipalAccess500JSONResponse{}, err
+			}
+
+			containingResources = append(containingResources, next.GetResourceObjectId()) // e.g. service or inventory group
+		}
+
+		// STEP 2a: see if the user permission can be matched to the scope
+		if len(containingResources) == 0 {
+			continue
+		}
+
+		var resourceDefinitions []api.ResourceDefinition
+
+		for _, cr := range containingResources {
+			operator := servicePermission.Filter.Operator
+
+			if strings.EqualFold("equals", operator) {
+				filter := api.ResourceDefinitionFilter{
+					Key:       servicePermission.Filter.Name,
+					Operation: api.ResourceDefinitionFilterOperation(operator),
+					Value:     cr,
+				}
+
+				resourceDefinitions = append(resourceDefinitions, api.ResourceDefinition{AttributeFilter: filter})
+
+			} else {
+				fmt.Errorf("Unsupported PRBAC operator: %v", err)
+				continue
+			}
+
+			if len(resourceDefinitions) != 0 {
+				// We can make an attribute filter for each containing thing (service, inventory group) the user has access to
+				permTuple := request.Params.Application + ":" + key // of the form "playbook-dispatcher:run:read"
+
+				resp.Data = append(resp.Data, api.Access{
+					Permission:          permTuple,
+					ResourceDefinitions: resourceDefinitions,
+				})
+			}
+		}
 
 	}
 

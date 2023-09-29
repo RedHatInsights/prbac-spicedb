@@ -39,7 +39,7 @@ func getRbacServices() server.Services {
 	pbFilter := server.Filter{
 		Name:         "service",
 		Operator:     "equals",
-		ResourceType: "Service",
+		ResourceType: "dispatcher/service",
 		Verb:         "view",
 	}
 
