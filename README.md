@@ -8,7 +8,7 @@ docker-compose up --build
 ```
 Test using an endpoint like:
 ```
-curl -I localhost:8080/access/
+curl "http://localhost:8080/access/?application=playbook-dispatcher&username=alice"
 ```
 ## Docker
 ```
