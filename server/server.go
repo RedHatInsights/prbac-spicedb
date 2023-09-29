@@ -35,7 +35,7 @@ type PrbacSpicedbServer struct {
 func (p PrbacSpicedbServer) GetPrincipalAccess(ctx context.Context, request api.GetPrincipalAccessRequestObject) (api.GetPrincipalAccessResponseObject, error) {
 	resp := api.GetPrincipalAccess200JSONResponse{}
 
-	// TODO: the follow would orginarily be extracted from the request headers
+	// TODO: the following would ordinarily be extracted from the request headers
 	userOrg := "aspian"
 	rootWorkspace := userOrg + "_root"
 
@@ -45,7 +45,7 @@ func (p PrbacSpicedbServer) GetPrincipalAccess(ctx context.Context, request api.
 
 		// Step 1: If this user has checkpermission on root workspace, they get permission with no attribute filters
 
-		r, err := p.SpicedbClient.CheckPermission(context.TODO(), &v1.CheckPermissionRequest{
+		r, err := p.SpicedbClient.CheckPermission(ctx, &v1.CheckPermissionRequest{
 			Resource: &v1.ObjectReference{
 				ObjectType: "workspace",
 				ObjectId:   rootWorkspace,
@@ -72,11 +72,11 @@ func (p PrbacSpicedbServer) GetPrincipalAccess(ctx context.Context, request api.
 
 		// STEP 2: If they don't have unrestricted permission, check for attribute filtered permissions
 
-		containingResourceType := servicePermission.Filter.ResourceType
-		permission := "view"
+		boundResourceType := servicePermission.Filter.ResourceType
+		permission := servicePermission.Filter.Verb
 
-		lrClient, err := p.SpicedbClient.LookupResources(context.TODO(), &v1.LookupResourcesRequest{
-			ResourceObjectType: containingResourceType,
+		lrClient, err := p.SpicedbClient.LookupResources(ctx, &v1.LookupResourcesRequest{
+			ResourceObjectType: boundResourceType,
 			Permission:         permission,
 			Subject: &v1.SubjectReference{
 				Object: &v1.ObjectReference{
@@ -128,18 +128,17 @@ func (p PrbacSpicedbServer) GetPrincipalAccess(ctx context.Context, request api.
 				fmt.Errorf("Unsupported PRBAC operator: %v", err)
 				continue
 			}
-
-			if len(resourceDefinitions) != 0 {
-				// We can make an attribute filter for each containing thing (service, inventory group) the user has access to
-				permTuple := request.Params.Application + ":" + key // of the form "playbook-dispatcher:run:read"
-
-				resp.Data = append(resp.Data, api.Access{
-					Permission:          permTuple,
-					ResourceDefinitions: resourceDefinitions,
-				})
-			}
 		}
 
+		if len(resourceDefinitions) != 0 {
+			// We can make an attribute filter for each containing thing (service, inventory group) the user has access to
+			permTuple := request.Params.Application + ":" + key // of the form "playbook-dispatcher:run:read"
+
+			resp.Data = append(resp.Data, api.Access{
+				Permission:          permTuple,
+				ResourceDefinitions: resourceDefinitions,
+			})
+		}
 	}
 
 	return resp, nil
