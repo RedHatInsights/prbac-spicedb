@@ -11,6 +11,7 @@ RUN go mod download
 # https://docs.docker.com/engine/reference/builder/#copy
 COPY *.go ./
 COPY api/*.go ./api/
+COPY server/*.go ./server/
 
 # Build
 RUN CGO_ENABLED=0 GOOS=linux go build -o /prbac-spicedb

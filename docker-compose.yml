@@ -14,6 +14,8 @@ services:
       - "8081:8081"
       - "9090:9090"
       - "50051:50051"
+    expose:
+      - "50051"
     environment:
       - "SPICEDB_DATASTORE_BOOTSTRAP_FILES=/mnt/spicedb_bootstrap.yaml"
       - "SPICEDB_DATASTORE_BOOTSTRAP_OVERWRITE=true"
@@ -55,7 +57,6 @@ services:
     expose:
       - "8080"
     environment:
-      SPICEDB_ENABLED: "true"
       SPICEDB_URL: "spicedb:50051"
       SPICEDB_PSK: "foobar"
     restart: unless-stopped
