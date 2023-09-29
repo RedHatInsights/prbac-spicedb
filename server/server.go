@@ -58,7 +58,7 @@ func (p PrbacSpicedbServer) GetPrincipalAccess(ctx context.Context, request api.
 		})
 
 		if err != nil {
-			fmt.Errorf("Spicedb error: %v", err)
+			fmt.Errorf("spicedb error: %v", err)
 			return api.GetPrincipalAccess500JSONResponse{}, err
 		}
 
@@ -87,7 +87,7 @@ func (p PrbacSpicedbServer) GetPrincipalAccess(ctx context.Context, request api.
 		})
 
 		if err != nil {
-			fmt.Errorf("Spicedb error: %v", err)
+			fmt.Errorf("spicedb error: %v", err)
 			return api.GetPrincipalAccess500JSONResponse{}, err
 		}
 
@@ -98,7 +98,7 @@ func (p PrbacSpicedbServer) GetPrincipalAccess(ctx context.Context, request api.
 				break
 			}
 			if err != nil {
-				fmt.Errorf("Spicedb error: %v", err)
+				fmt.Errorf("spicedb error: %v", err)
 				return api.GetPrincipalAccess500JSONResponse{}, err
 			}
 
@@ -125,7 +125,7 @@ func (p PrbacSpicedbServer) GetPrincipalAccess(ctx context.Context, request api.
 				resourceDefinitions = append(resourceDefinitions, api.ResourceDefinition{AttributeFilter: filter})
 
 			} else {
-				fmt.Errorf("Unsupported PRBAC operator: %v", err)
+				fmt.Errorf("unsupported PRBAC operator: %v", err)
 				continue
 			}
 		}

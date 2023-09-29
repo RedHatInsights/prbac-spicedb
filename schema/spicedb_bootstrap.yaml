@@ -224,6 +224,8 @@ relationships: |-
   role_binding:aspian_observability_configmanager_admins#granted@role:configmanager_admin
   role_binding:aspian_observability_configmanager_admins#subject@user:dani
   dispatcher/service:configmanager#user_grant@role_binding:aspian_observability_configmanager_admins
+  
+  dispatcher/service:generic_service#user_grant@role_binding:aspian_telemetry_configmanager_admins
 
   inventory/host:da7afeed-da04-4651-84d1-187fa5c23f6c#workspace@workspace:aspian/telemetry
   inventory/host:41e12750-da04-4651-84d1-187fa5c23f6c#workspace@workspace:aspian/observability
