@@ -91,7 +91,7 @@ func (p PrbacSpicedbServer) GetPrincipalAccess(ctx context.Context, request api.
 			return api.GetPrincipalAccess500JSONResponse{}, err
 		}
 
-		var containingResources []string
+		var boundResources []string
 		for {
 			next, err := lrClient.Recv()
 			if errors.Is(err, io.EOF) {
@@ -102,30 +102,30 @@ func (p PrbacSpicedbServer) GetPrincipalAccess(ctx context.Context, request api.
 				return api.GetPrincipalAccess500JSONResponse{}, err
 			}
 
-			containingResources = append(containingResources, next.GetResourceObjectId()) // e.g. service or inventory group
+			boundResources = append(boundResources, next.GetResourceObjectId()) // e.g. service or inventory group
 		}
 
 		// STEP 2a: see if the user permission can be matched to the scope
-		if len(containingResources) == 0 {
+		if len(boundResources) == 0 {
 			continue
 		}
 
 		var resourceDefinitions []api.ResourceDefinition
 
-		for _, cr := range containingResources {
+		for _, resource := range boundResources {
 			operator := servicePermission.Filter.Operator
 
-			if strings.EqualFold("equals", operator) {
+			if strings.EqualFold("equal", operator) {
 				filter := api.ResourceDefinitionFilter{
 					Key:       servicePermission.Filter.Name,
 					Operation: api.ResourceDefinitionFilterOperation(operator),
-					Value:     cr,
+					Value:     resource,
 				}
 
 				resourceDefinitions = append(resourceDefinitions, api.ResourceDefinition{AttributeFilter: filter})
 
 			} else {
-				fmt.Errorf("unsupported PRBAC operator: %v", err)
+				fmt.Errorf("unsupported PRBAC operator: %s", operator)
 				continue
 			}
 		}
