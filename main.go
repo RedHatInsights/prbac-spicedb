@@ -1,8 +1,10 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/merlante/prbac-spicedb/api"
+	"io"
 	"net/http"
 	"os"
 
@@ -17,7 +19,12 @@ var (
 func main() {
 	overwriteVarsFromEnv()
 
-	services := getRbacServices()
+	services, err := getRbacServices()
+	if err != nil {
+		fmt.Errorf("%v", err)
+		os.Exit(1)
+	}
+
 	spiceDbClient, err := server.GetSpiceDbClient(spiceDBURL, spiceDBToken)
 	if err != nil {
 		fmt.Errorf("%v", err)
@@ -33,27 +40,21 @@ func main() {
 	http.ListenAndServe(":8080", r)
 }
 
-func getRbacServices() server.Services {
-	services := server.Services{}
+func getRbacServices() (services server.Services, err error) {
+	servicesFile, err := os.Open("services.json")
+	if err != nil {
+		return nil, err
+	}
+	defer servicesFile.Close()
 
-	pbFilter := server.Filter{
-		Name:         "service",
-		Operator:     "equal",
-		ResourceType: "dispatcher/service",
-		Verb:         "view",
+	bytes, err := io.ReadAll(servicesFile)
+	if err != nil {
+		return nil, err
 	}
 
-	pbResourcePerm := server.ResourcePerm{
-		Permission: "dispatcher_view_runs",
-		Filter:     pbFilter,
-	}
+	json.Unmarshal(bytes, &services)
 
-	pbPermission := server.Permission{}
-	pbPermission["run:read"] = pbResourcePerm
-
-	services["playbook-dispatcher"] = pbPermission
-
-	return services
+	return
 }
 
 func overwriteVarsFromEnv() {

@@ -1,0 +1,13 @@
+{
+  "playbook-dispatcher": {
+    "run:read": {
+      "permission": "dispatcher_view_runs",
+      "filter": {
+        "name": "service",
+        "operator": "equal",
+        "resourceType": "dispatcher/service",
+        "verb": "view"
+      }
+    }
+  }
+}
