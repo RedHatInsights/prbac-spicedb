@@ -35,7 +35,7 @@ func main() {
 		RbacServices:  services,
 		SpicedbClient: spiceDbClient,
 	}
-	r := api.Handler(api.NewStrictHandler(server, nil))
+	r := api.Handler(api.NewStrictHandler(&server, nil))
 
 	http.ListenAndServe(":8080", r)
 }
