@@ -294,12 +294,94 @@ func (*PrbacSpicedbServer) UpdateRole(ctx context.Context, request api.UpdateRol
 	panic("implement me")
 }
 
-func (*PrbacSpicedbServer) GetRoleAccess(ctx context.Context, request api.GetRoleAccessRequestObject) (api.GetRoleAccessResponseObject, error) {
-	//TODO implement me
-	panic("implement me")
+func (p *PrbacSpicedbServer) GetRoleAccess(ctx context.Context, request api.GetRoleAccessRequestObject) (api.GetRoleAccessResponseObject, error) {
+	// TODO: Not fully tested/implemented -- see discussion in getPRBACPermsFromSpicedbPerms
+
+	resp := api.GetRoleAccess200JSONResponse{}
+
+	role := request.Uuid // assume that the uuid form is the form that we are storing in spicedb
+
+	rClient, err := p.SpicedbClient.ReadRelationships(ctx, &v1.ReadRelationshipsRequest{
+		RelationshipFilter: &v1.RelationshipFilter{
+			ResourceType:       "role",
+			OptionalResourceId: role.String(),
+			OptionalSubjectFilter: &v1.SubjectFilter{
+				SubjectType: "user",
+			},
+		},
+	})
+
+	if err != nil {
+		fmt.Errorf("spicedb error: %v", err)
+		return api.GetRoleAccess500JSONResponse{}, err
+	}
+
+	var relationships []string
+	for {
+		next, err := rClient.Recv()
+		if errors.Is(err, io.EOF) {
+			break
+		}
+		if err != nil {
+			fmt.Errorf("spicedb error: %v", err)
+			return api.GetRoleAccess500JSONResponse{}, err
+		}
+
+		relationships = append(relationships, next.GetRelationship().GetRelation())
+	}
+
+	resp.Data = p.getPRBACPermsFromSpicedbPerms(relationships)
+
+	return resp, nil
 }
 
 func (*PrbacSpicedbServer) GetStatus(ctx context.Context, request api.GetStatusRequestObject) (api.GetStatusResponseObject, error) {
 	//TODO implement me
 	panic("implement me")
+}
+
+func (p *PrbacSpicedbServer) getPRBACPermsFromSpicedbPerms(spicedbPerms []string) (accesses []api.Access) {
+	var spiceToPRbacMapping map[string]string
+
+	for service, permission := range p.RbacServices {
+		for rbacPerm, resourcePerm := range permission {
+			spiceDbPerm := resourcePerm.Permission
+
+			spiceToPRbacMapping[spiceDbPerm] = service + ":" + rbacPerm
+		}
+	}
+
+	for _, spiceDbPerm := range spicedbPerms {
+		rbacPerm, mappingFound := spiceToPRbacMapping[spiceDbPerm]
+
+		if mappingFound {
+			accesses = append(accesses, api.Access{
+				Permission: rbacPerm,
+				// TODO: anything for resource definitions?
+
+				// Discussion:
+				// Without adding roles to the filter in the config (see below), it's not clear how we would be able to attach resourceDefinitions to a role.
+				// However, adding roles may also imply changes in spicedb, bringing up a host of consistency issues we'd like to avoid.
+				//
+				//{
+				//	"playbook-dispatcher": {
+				//		"run:read": {
+				//			"permission": "dispatcher_view_runs",
+				//			"filter": {
+				//				"roles": ["task_admin", "remediations_admin"],
+				//				"name": "service",
+				//				"operator": "equal",
+				//				"resourceType": "dispatcher/service",
+				//				"verb": "view"
+				//			}
+				//		}
+				//	}
+				//}
+
+				// But before we do something like this, we want to step back and see if this endpoint enjoys enough usage to warrant it.
+			})
+		}
+	}
+
+	return
 }
