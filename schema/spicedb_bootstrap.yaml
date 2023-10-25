@@ -1,5 +1,5 @@
 schema: |-
-    // instead of going in reverse, and having to repeat hierarchies, go forward:
+  // instead of going in reverse, and having to repeat hierarchies, go forward:
   // a system "may be subscribed" to a repo (rather than a repo is subscribed by a system)
   // test relations
   // content/host:h1#workspace@workspace:w1
@@ -1146,39 +1146,6 @@ schema: |-
 
 relationships: |-
   //Static data
-  role:remediations_admin#dispatcher_view_remediations@user:*
-  role:remediations_admin#inventory_view_hosts@user:*
-  role:remediations_admin#dispatcher_view_runs@user:*
-
-  role:configmanager_admin#dispatcher_view_configmanager@user:*
-  role:configmanager_admin#inventory_view_hosts@user:*
-  role:configmanager_admin#dispatcher_view_runs@user:*
-
-  role:tasks_admin#dispatcher_view_tasks@user:*
-  role:tasks_admin#inventory_view_hosts@user:*
-
-  //Scenario data
-  workspace:aspian_root#parent@organization:aspian
-  workspace:aspian/telemetry#parent@workspace:aspian_root
-  workspace:aspian/observability#parent@workspace:aspian_root
-
-  role_binding:aspian_remediations_admins#granted@role:remediations_admin
-  role_binding:aspian_remediations_admins#subject@user:sara
-  workspace:aspian_root#user_grant@role_binding:aspian_remediations_admins
-
-  role_binding:aspian_telemetry_configmanager_admins#granted@role:configmanager_admin
-  role_binding:aspian_telemetry_configmanager_admins#subject@user:david
-  role_binding:aspian_telemetry_configmanager_admins#subject@user:alice
-  dispatcher/service:remediations#user_grant@role_binding:aspian_telemetry_configmanager_admins
-
-  role_binding:aspian_observability_configmanager_admins#granted@role:configmanager_admin
-  role_binding:aspian_observability_configmanager_admins#subject@user:dani
-  dispatcher/service:configmanager#user_grant@role_binding:aspian_observability_configmanager_admins
-  
-  dispatcher/service:generic_service#user_grant@role_binding:aspian_telemetry_configmanager_admins
-
-  inventory/host:da7afeed-da04-4651-84d1-187fa5c23f6c#workspace@workspace:aspian/telemetry
-  inventory/host:41e12750-da04-4651-84d1-187fa5c23f6c#workspace@workspace:aspian/observability
   
   // PRBAC assertions
   //assertTrue:

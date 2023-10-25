@@ -194,9 +194,37 @@ func (*PrbacSpicedbServer) UpdateGroup(ctx context.Context, request api.UpdateGr
 	panic("implement me")
 }
 
-func (*PrbacSpicedbServer) DeletePrincipalFromGroup(ctx context.Context, request api.DeletePrincipalFromGroupRequestObject) (api.DeletePrincipalFromGroupResponseObject, error) {
-	//TODO implement me
-	panic("implement me")
+func (p *PrbacSpicedbServer) DeletePrincipalFromGroup(ctx context.Context, request api.DeletePrincipalFromGroupRequestObject) (api.DeletePrincipalFromGroupResponseObject, error) {
+	userNames := strings.Split(request.Params.Usernames, ",")
+	updates := make([]*v1.RelationshipUpdate, len(userNames))
+	for i, username := range userNames {
+		updates[i] = &v1.RelationshipUpdate{
+			Operation: v1.RelationshipUpdate_OPERATION_DELETE,
+			Relationship: &v1.Relationship{
+				Resource: &v1.ObjectReference{
+					ObjectType: "group",
+					ObjectId:   request.Uuid.String(),
+				},
+				Relation: "member",
+				Subject: &v1.SubjectReference{
+					Object: &v1.ObjectReference{
+						ObjectType: "user",
+						ObjectId:   username, // TODO: needs to be an ID not a username
+					},
+				},
+			},
+		}
+	}
+
+	_, err := p.SpicedbClient.WriteRelationships(ctx, &v1.WriteRelationshipsRequest{
+		Updates: updates,
+	})
+
+	if err != nil {
+		return api.DeletePrincipalFromGroup500JSONResponse{}, err
+	}
+
+	return api.DeletePrincipalFromGroup204Response{}, nil
 }
 
 func (*PrbacSpicedbServer) GetPrincipalsFromGroup(ctx context.Context, request api.GetPrincipalsFromGroupRequestObject) (api.GetPrincipalsFromGroupResponseObject, error) {
@@ -204,9 +232,37 @@ func (*PrbacSpicedbServer) GetPrincipalsFromGroup(ctx context.Context, request a
 	panic("implement me")
 }
 
-func (*PrbacSpicedbServer) AddPrincipalToGroup(ctx context.Context, request api.AddPrincipalToGroupRequestObject) (api.AddPrincipalToGroupResponseObject, error) {
-	//TODO implement me
-	panic("implement me")
+func (p *PrbacSpicedbServer) AddPrincipalToGroup(ctx context.Context, request api.AddPrincipalToGroupRequestObject) (api.AddPrincipalToGroupResponseObject, error) {
+	updates := make([]*v1.RelationshipUpdate, len(request.Body.Principals))
+	for i, principal := range request.Body.Principals {
+		updates[i] = &v1.RelationshipUpdate{
+			Operation: v1.RelationshipUpdate_OPERATION_TOUCH,
+			Relationship: &v1.Relationship{
+
+				Resource: &v1.ObjectReference{
+					ObjectType: "group",
+					ObjectId:   request.Uuid.String(),
+				},
+				Relation: "member",
+				Subject: &v1.SubjectReference{
+					Object: &v1.ObjectReference{
+						ObjectType: "user",
+						ObjectId:   principal.Username, // TODO: needs to be an ID not a username
+					},
+				},
+			},
+		}
+	}
+
+	_, err := p.SpicedbClient.WriteRelationships(ctx, &v1.WriteRelationshipsRequest{
+		Updates: updates,
+	})
+
+	if err != nil {
+		return api.AddPrincipalToGroup500JSONResponse{}, err
+	}
+
+	return api.AddPrincipalToGroup200JSONResponse{}, nil
 }
 
 func (*PrbacSpicedbServer) DeleteRoleFromGroup(ctx context.Context, request api.DeleteRoleFromGroupRequestObject) (api.DeleteRoleFromGroupResponseObject, error) {
