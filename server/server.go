@@ -4,11 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	v1 "github.com/authzed/authzed-go/proto/authzed/api/v1"
-	"github.com/authzed/authzed-go/v1"
-	"github.com/merlante/prbac-spicedb/api"
 	"io"
 	"strings"
+
+	v1 "github.com/authzed/authzed-go/proto/authzed/api/v1"
+	"github.com/authzed/authzed-go/v1"
+	"github.com/google/uuid"
+	"github.com/merlante/prbac-spicedb/api"
 )
 
 type Filter struct {
@@ -275,9 +277,37 @@ func (*PrbacSpicedbServer) ListRolesForGroup(ctx context.Context, request api.Li
 	panic("implement me")
 }
 
-func (*PrbacSpicedbServer) AddRoleToGroup(ctx context.Context, request api.AddRoleToGroupRequestObject) (api.AddRoleToGroupResponseObject, error) {
-	//TODO implement me
-	panic("implement me")
+func (p *PrbacSpicedbServer) AddRoleToGroup(ctx context.Context, request api.AddRoleToGroupRequestObject) (api.AddRoleToGroupResponseObject, error) {
+	updates := make([]*v1.RelationshipUpdate, len(request.Body.Roles))
+	for i, role := range request.Body.Roles {
+		updates[i] = &v1.RelationshipUpdate{
+			Operation: v1.RelationshipUpdate_OPERATION_TOUCH,
+			Relationship: &v1.Relationship{
+				Resource: &v1.ObjectReference{
+					ObjectType: "role_binding",
+					ObjectId:   role.String(),
+				},
+				Relation: "subject",
+				Subject: &v1.SubjectReference{
+					Object: &v1.ObjectReference{
+						ObjectType: "group",
+						ObjectId:   request.Uuid.String(),
+					},
+					OptionalRelation: "member",
+				},
+			},
+		}
+	}
+
+	_, err := p.SpicedbClient.WriteRelationships(ctx, &v1.WriteRelationshipsRequest{
+		Updates: updates,
+	})
+
+	if err != nil {
+		return api.AddRoleToGroup500JSONResponse{}, err
+	}
+
+	return api.AddRoleToGroup200JSONResponse{}, nil
 }
 
 func (*PrbacSpicedbServer) ListPermissions(ctx context.Context, request api.ListPermissionsRequestObject) (api.ListPermissionsResponseObject, error) {
@@ -325,9 +355,41 @@ func (*PrbacSpicedbServer) ListRoles(ctx context.Context, request api.ListRolesR
 	panic("implement me")
 }
 
-func (*PrbacSpicedbServer) CreateRole(ctx context.Context, request api.CreateRoleRequestObject) (api.CreateRoleResponseObject, error) {
-	//TODO implement me
-	panic("implement me")
+func (p *PrbacSpicedbServer) CreateRole(ctx context.Context, request api.CreateRoleRequestObject) (api.CreateRoleResponseObject, error) {
+	// TODO: the following would ordinarily be extracted from the request headers
+	userOrg := "aspian"
+	rootWorkspace := userOrg + "_root"
+
+	// Create corresponding role and rolebinding
+	updates := make([]*v1.RelationshipUpdate, 2)
+
+	id, err := uuid.NewUUID()
+	if err != nil {
+		return nil, err
+	}
+
+	roleId := id.String()
+
+	updates[0] = createRelationshipUpdate(v1.RelationshipUpdate_OPERATION_TOUCH, "role_binding", roleId, "granted", "role", roleId)
+	updates[1] = createRelationshipUpdate(v1.RelationshipUpdate_OPERATION_TOUCH, "workspace", rootWorkspace, "user_grant", "role_binding", roleId)
+
+	for _, access := range request.Body.Access {
+		//Add converted role permissions
+		convertedPermission := cleanNameForSchemaCompatibility(access.Permission)
+		updates = append(updates, createRelationshipUpdate(v1.RelationshipUpdate_OPERATION_TOUCH, "role", roleId, convertedPermission, "user", "*"))
+	}
+
+	_, err = p.SpicedbClient.WriteRelationships(ctx, &v1.WriteRelationshipsRequest{
+		Updates: updates,
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return api.CreateRole201JSONResponse{
+		Uuid: id,
+	}, nil
 }
 
 func (*PrbacSpicedbServer) DeleteRole(ctx context.Context, request api.DeleteRoleRequestObject) (api.DeleteRoleResponseObject, error) {
@@ -440,4 +502,34 @@ func (p *PrbacSpicedbServer) getPRBACPermsFromSpicedbPerms(spicedbPerms []string
 	}
 
 	return
+}
+
+func cleanNameForSchemaCompatibility(name string) string { //Taken from schema translator
+	name = strings.ToLower(name)
+	name = strings.ReplaceAll(name, "-", "_")
+	name = strings.ReplaceAll(name, ".", "_")
+	name = strings.ReplaceAll(name, ":", "_")
+	name = strings.ReplaceAll(name, " ", "_")
+	name = strings.ReplaceAll(name, "*", "all")
+
+	return name
+}
+
+func createRelationshipUpdate(operation v1.RelationshipUpdate_Operation, objectType, objectId, relation, subjectType, subjectId string) *v1.RelationshipUpdate {
+	return &v1.RelationshipUpdate{
+		Operation: v1.RelationshipUpdate_OPERATION_TOUCH,
+		Relationship: &v1.Relationship{
+			Resource: &v1.ObjectReference{
+				ObjectType: objectType,
+				ObjectId:   objectId,
+			},
+			Relation: relation,
+			Subject: &v1.SubjectReference{
+				Object: &v1.ObjectReference{
+					ObjectType: subjectType,
+					ObjectId:   subjectId,
+				},
+			},
+		},
+	}
 }

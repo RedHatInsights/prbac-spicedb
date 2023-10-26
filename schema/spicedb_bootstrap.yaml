@@ -1146,7 +1146,7 @@ schema: |-
 
 relationships: |-
   //Static data
-  
+  inventory/hosts:h1#workspace@workspace:aspian_root  
   // PRBAC assertions
   //assertTrue:
   //  - "workspace:aspian_root#dispatcher_view_runs@user:sara"
