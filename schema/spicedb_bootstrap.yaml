@@ -29,7 +29,7 @@ schema: |-
   // role_binding:u1_admin#subject@user:u1
   // role_binding:u1_admin#granted@role:content_admin
   // workspace:w2#user_grant@role_binding:u1_admin
-
+  // superficial change
   definition user {}
 
   definition group {
