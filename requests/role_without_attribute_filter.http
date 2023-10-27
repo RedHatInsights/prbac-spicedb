@@ -1,0 +1,49 @@
+### Create role (without attribute filters)
+POST http://localhost:8080/roles/
+Content-Type: application/json; charset=UTF-8
+
+{
+  "name": "Inventory Hosts Administrator",
+  "description": "Be able to read and edit Inventory Hosts data.",
+  "system": true,
+  "platform_default": true,
+  "admin_default": true,
+  "version": 3,
+  "access": [
+    {
+      "permission": "inventory:hosts:write"
+    },
+    {
+      "permission": "inventory:hosts:read"
+    }
+  ]
+}
+
+> {%
+    client.global.set("response_uuid", response.body.uuid);
+%}
+
+### Add role to group
+POST http://localhost:8080/groups/{{group_uuid}}/roles/
+Content-Type: application/json; charset=UTF-8
+
+{
+  "roles": [
+    "{{response_uuid}}"
+  ]
+}
+
+### Add user to group
+POST http://localhost:8080/groups/{{group_uuid}}/principals/
+Content-Type: application/json; charset=UTF-8
+
+{
+  "principals": [
+    {
+      "username": "user1"
+    }
+  ]
+}
+
+### RUN in terminal
+### zed permission check inventory/hosts:h1 read user:user1 --explain --consistency-full
