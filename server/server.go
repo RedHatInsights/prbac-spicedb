@@ -34,6 +34,13 @@ type PrbacSpicedbServer struct {
 	SpicedbClient *authzed.Client
 }
 
+var permissionsToSystemRoles = map[string]string{
+	"inventory:hosts:read":   "e18257ae-7506-11ee-8c9d-0242ac170005",
+	"inventory:hosts:write":  "c4eaa6fb-7506-11ee-8c9d-0242ac170005",
+	"inventory:groups:read":  "10d23bda-7507-11ee-8c9d-0242ac170005",
+	"inventory:groups:write": "fca60508-7506-11ee-8c9d-0242ac170005",
+}
+
 func (p *PrbacSpicedbServer) GetPrincipalAccess(ctx context.Context, request api.GetPrincipalAccessRequestObject) (api.GetPrincipalAccessResponseObject, error) {
 	resp := api.GetPrincipalAccess200JSONResponse{}
 
@@ -278,27 +285,54 @@ func (*PrbacSpicedbServer) ListRolesForGroup(ctx context.Context, request api.Li
 }
 
 func (p *PrbacSpicedbServer) AddRoleToGroup(ctx context.Context, request api.AddRoleToGroupRequestObject) (api.AddRoleToGroupResponseObject, error) {
-	updates := make([]*v1.RelationshipUpdate, len(request.Body.Roles))
-	for i, role := range request.Body.Roles {
-		updates[i] = &v1.RelationshipUpdate{
-			Operation: v1.RelationshipUpdate_OPERATION_TOUCH,
-			Relationship: &v1.Relationship{
-				Resource: &v1.ObjectReference{
-					ObjectType: "role_binding",
-					ObjectId:   role.String(),
-				},
-				Relation: "subject",
-				Subject: &v1.SubjectReference{
-					Object: &v1.ObjectReference{
-						ObjectType: "group",
-						ObjectId:   request.Uuid.String(),
-					},
-					OptionalRelation: "member",
-				},
+	updates := make([]*v1.RelationshipUpdate, 0)
+
+	for _, role := range request.Body.Roles {
+		client, err := p.SpicedbClient.LookupSubjects(ctx, &v1.LookupSubjectsRequest{
+			Resource: &v1.ObjectReference{
+				ObjectType: "rbac/v1role",
+				ObjectId:   role.String(),
 			},
+			Permission:            "binding",
+			SubjectObjectType:     "role_binding",
+			OptionalConcreteLimit: 0,
+		})
+
+		if err != nil {
+			return nil, err
+		}
+
+		for true {
+			result, err := client.Recv()
+			if err != nil {
+				if err == io.EOF {
+					break
+				} else {
+					return nil, err
+				}
+			}
+
+			updates = append(updates, &v1.RelationshipUpdate{
+				Operation: v1.RelationshipUpdate_OPERATION_TOUCH,
+				Relationship: &v1.Relationship{
+					Resource: &v1.ObjectReference{
+						ObjectType: "role_binding",
+						ObjectId:   result.Subject.SubjectObjectId,
+					},
+					Relation: "subject",
+					Subject: &v1.SubjectReference{
+						Object: &v1.ObjectReference{
+							ObjectType: "group",
+							ObjectId:   request.Uuid.String(),
+						},
+						OptionalRelation: "member",
+					},
+				},
+			})
 		}
 	}
 
+	//TODO: some sort of concurrency check is required here: this write is dependent upon results read above
 	_, err := p.SpicedbClient.WriteRelationships(ctx, &v1.WriteRelationshipsRequest{
 		Updates: updates,
 	})
@@ -360,9 +394,6 @@ func (p *PrbacSpicedbServer) CreateRole(ctx context.Context, request api.CreateR
 	userOrg := "aspian"
 	rootWorkspace := userOrg + "_root"
 
-	// Create corresponding role and rolebinding
-	updates := make([]*v1.RelationshipUpdate, 2)
-
 	id, err := uuid.NewUUID()
 	if err != nil {
 		return nil, err
@@ -370,13 +401,38 @@ func (p *PrbacSpicedbServer) CreateRole(ctx context.Context, request api.CreateR
 
 	roleId := id.String()
 
+	// Create corresponding role and rolebinding
+	updates := make([]*v1.RelationshipUpdate, 4)
+
 	updates[0] = createRelationshipUpdate(v1.RelationshipUpdate_OPERATION_TOUCH, "role_binding", roleId, "granted", "role", roleId)
 	updates[1] = createRelationshipUpdate(v1.RelationshipUpdate_OPERATION_TOUCH, "workspace", rootWorkspace, "user_grant", "role_binding", roleId)
+	updates[2] = createRelationshipUpdate(v1.RelationshipUpdate_OPERATION_TOUCH, "rbac/v1role", roleId, "role", "role", roleId)
+	updates[3] = createRelationshipUpdate(v1.RelationshipUpdate_OPERATION_TOUCH, "rbac/v1role", roleId, "binding", "role_binding", roleId)
 
 	for _, access := range request.Body.Access {
-		//Add converted role permissions
-		convertedPermission := cleanNameForSchemaCompatibility(access.Permission)
-		updates = append(updates, createRelationshipUpdate(v1.RelationshipUpdate_OPERATION_TOUCH, "role", roleId, convertedPermission, "user", "*"))
+		if access.ResourceDefinitions == nil {
+			//Add converted role permissions
+			convertedPermission := cleanNameForSchemaCompatibility(access.Permission)
+			updates = append(updates, createRelationshipUpdate(v1.RelationshipUpdate_OPERATION_TOUCH, "role", roleId, convertedPermission, "user", "*"))
+		} else {
+			for _, definition := range access.ResourceDefinitions {
+				filter := definition.AttributeFilter
+
+				switch filter.Key {
+				case "group.id":
+					if role, ok := permissionsToSystemRoles[access.Permission]; ok {
+						bindingId := roleId + "_" + filter.Value //TODO: value can be an array, but the generated API doesn't accept it.
+
+						updates = append(updates, createRelationshipUpdate(v1.RelationshipUpdate_OPERATION_TOUCH, "workspace", filter.Value, "parent", "workspace", rootWorkspace))
+						updates = append(updates, createRelationshipUpdate(v1.RelationshipUpdate_OPERATION_TOUCH, "workspace", filter.Value, "user_grant", "role_binding", bindingId))
+						updates = append(updates, createRelationshipUpdate(v1.RelationshipUpdate_OPERATION_TOUCH, "rbac/v1role", roleId, "binding", "role_binding", bindingId))
+						updates = append(updates, createRelationshipUpdate(v1.RelationshipUpdate_OPERATION_TOUCH, "role_binding", bindingId, "granted", "role", role))
+					}
+				default:
+					fmt.Printf("[INFO] Unhandled resource definition for permission %s in role %s, key: %s\n", access.Permission, request.Body.Name, filter.Key)
+				}
+			}
+		}
 	}
 
 	_, err = p.SpicedbClient.WriteRelationships(ctx, &v1.WriteRelationshipsRequest{
@@ -409,6 +465,9 @@ func (*PrbacSpicedbServer) PatchRole(ctx context.Context, request api.PatchRoleR
 
 func (*PrbacSpicedbServer) UpdateRole(ctx context.Context, request api.UpdateRoleRequestObject) (api.UpdateRoleResponseObject, error) {
 	//TODO implement me
+	//Needs to perform similar writes to CreateRole ~plus~:
+	//* Any no longer used permissions need to be revoked, see AddGroupToRole for how to find existing role_bindings
+	//* Any new role_bindings that need to be created need their subject to be copied from the original role_binding subject
 	panic("implement me")
 }
 

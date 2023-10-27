@@ -728,6 +728,11 @@ schema: |-
     permission metrics_report = (user_grant->openshift_metrics_report & entitlement_grant->openshift_metrics_entitled) + cluster->metrics_report
   }
 
+  definition rbac/v1role {
+    relation role: role
+    relation binding: role_binding
+  }
+
   definition advisor/disable_recommendations {
     relation workspace: workspace
     permission write = workspace->advisor_disable_recommendations_write + workspace->advisor_all_all
@@ -1148,6 +1153,12 @@ relationships: |-
   //Static data
   inventory/hosts:h1#workspace@workspace:aspian_root  
   // PRBAC assertions
+  role:10d23bda-7507-11ee-8c9d-0242ac170005#inventory_groups_read@user:*
+  role:c4eaa6fb-7506-11ee-8c9d-0242ac170005#inventory_hosts_read@user:*
+  role:c4eaa6fb-7506-11ee-8c9d-0242ac170005#inventory_hosts_write@user:*
+  role:e18257ae-7506-11ee-8c9d-0242ac170005#inventory_hosts_read@user:*
+  role:fca60508-7506-11ee-8c9d-0242ac170005#inventory_groups_read@user:*
+  role:fca60508-7506-11ee-8c9d-0242ac170005#inventory_groups_write@user:*
   //assertTrue:
   //  - "workspace:aspian_root#dispatcher_view_runs@user:sara"
   //  - "dispatcher/service:remediations#view@user:david"
