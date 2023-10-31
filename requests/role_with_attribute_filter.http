@@ -1,0 +1,61 @@
+### Create role (without attribute filters)
+POST http://localhost:8080/roles/
+Content-Type: application/json; charset=UTF-8
+
+{
+  "name": "team_ros",
+  "description": "Be able to read Inventory Groups data.",
+  "system": true,
+  "platform_default": false,
+  "admin_default": false,
+  "version": 3,
+  "access": [
+    {
+      "permission": "inventory:hosts:read"
+    },
+    {
+      "permission": "inventory:hosts:write",
+      "resourceDefinitions": [
+        {
+          "attributeFilter": {
+            "key": "group.id",
+            "operation": "in",
+            "value": "ROS"
+          }
+        }
+      ]
+    }
+  ]
+}
+
+> {%
+    client.global.set("response_uuid", response.body.uuid);
+%}
+
+### Add role to group
+POST http://localhost:8080/groups/{{group_uuid_2}}/roles/
+Content-Type: application/json; charset=UTF-8
+
+{
+  "roles": [
+    "{{response_uuid}}"
+  ]
+}
+
+### Add user to group
+POST http://localhost:8080/groups/{{group_uuid_2}}/principals/
+Content-Type: application/json; charset=UTF-8
+
+{
+  "principals": [
+    {
+      "username": "user2"
+    }
+  ]
+}
+
+### RUN in terminal
+### To show org-wide read access:
+### zed permission check workspace:aspian_root inventory_hosts_read user:user2 --explain --consistency-full
+### To show ROS write access:
+### zed permission check workspace:ROS inventory_hosts_write user:user2 --explain --consistency-full
